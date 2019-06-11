@@ -17,11 +17,12 @@ import {ModalDismissReasons} from './modal-dismiss-reasons';
 @Component({
   selector: 'ngb-modal-window',
   host: {
-    '[class]': '"modal fade show d-block" + (windowClass ? " " + windowClass : "")',
+    '[class]': '"modal show d-block" + (windowClass ? " " + windowClass : "")',
     'role': 'dialog',
     'tabindex': '-1',
     '(keyup.esc)': 'escKey($event)',
-    '(click)': 'backdropClick($event)',
+    '(mousedown)': 'backdropClick($event)',
+    '(touchstart)': 'backdropClick($event)',
     '[attr.aria-modal]': 'true',
     '[attr.aria-labelledby]': 'ariaLabelledBy',
   },

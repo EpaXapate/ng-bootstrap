@@ -3,6 +3,9 @@
   "version": "4.2.1",
   "description": "Angular powered Bootstrap",
   "author": "https://github.com/ng-bootstrap/ng-bootstrap/graphs/contributors",
+  "publishConfig": {
+    "registry": "http://nexus.centralgest.com/repository/npm-private/"
+  },
   "engines": {
     "node": ">=10.9",
     "yarn": ">=1.3.0 <2.0.0"
