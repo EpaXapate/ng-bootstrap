@@ -33,14 +33,14 @@ import {ModalDismissReasons} from './modal-dismiss-reasons';
   template: `
     <div [class]="'modal-dialog' + (size ? ' modal-' + size : '') + (centered ? ' modal-dialog-centered' : '') +
      (scrollable ? ' modal-dialog-scrollable' : '')" role="document">
-        <div class="modal-content"><ng-content></ng-content></div>
+      <div class="modal-content"><ng-content></ng-content></div>
     </div>
-    `,
+  `,
   encapsulation: ViewEncapsulation.None,
   styleUrls: ['./modal.scss']
 })
 export class NgbModalWindow implements OnInit,
-    AfterViewInit, OnDestroy {
+  AfterViewInit, OnDestroy {
   private _elWithFocus: Element;  // element that is focused prior to modal opening
 
   @Input() ariaLabelledBy: string;
@@ -56,15 +56,15 @@ export class NgbModalWindow implements OnInit,
   constructor(@Inject(DOCUMENT) private _document: any, private _elRef: ElementRef<HTMLElement>, zone: NgZone) {
     zone.runOutsideAngular(() => {
       fromEvent<KeyboardEvent>(this._elRef.nativeElement, 'keyup')
-          .pipe(
-              takeUntil(this.dismissEvent),
-              // tslint:disable-next-line:deprecation
-              filter(e => e.which === Key.Escape && this.keyboard))
-          .subscribe(event => requestAnimationFrame(() => {
-                       if (!event.defaultPrevented) {
-                         zone.run(() => this.dismiss(ModalDismissReasons.ESC));
-                       }
-                     }));
+        .pipe(
+          takeUntil(this.dismissEvent),
+          // tslint:disable-next-line:deprecation
+          filter(e => e.which === Key.Escape && this.keyboard))
+        .subscribe(event => requestAnimationFrame(() => {
+          if (!event.defaultPrevented) {
+            zone.run(() => this.dismiss(ModalDismissReasons.ESC));
+          }
+        }));
     });
   }
 
