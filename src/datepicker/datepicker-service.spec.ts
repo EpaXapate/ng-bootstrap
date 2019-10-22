@@ -5,6 +5,7 @@ import {NgbDate} from './ngb-date';
 import {Subscription} from 'rxjs';
 import {DatepickerViewModel} from './datepicker-view-model';
 import {NgbDatepickerI18n, NgbDatepickerI18nDefault} from './datepicker-i18n';
+import {Type} from '@angular/core';
 
 describe('ngb-datepicker-service', () => {
 
@@ -29,7 +30,7 @@ describe('ngb-datepicker-service', () => {
       ]
     });
 
-    calendar = TestBed.get(NgbCalendar);
+    calendar = TestBed.get(NgbCalendar as Type<NgbCalendar>);
     service = TestBed.get(NgbDatepickerService);
     subscriptions = [];
     model = undefined;
@@ -551,7 +552,7 @@ describe('ngb-datepicker-service', () => {
         expect(model.selectBoxes.years).toEqual(range(2010, 2030));
       });
 
-      it(`should generate [min, +10] 'years' when max date is missing`, () => {
+      it(`should generate [min/-500, +10] 'years' when max date is missing`, () => {
         service.minDate = new NgbDate(2010, 1, 1);
         service.open(new NgbDate(2011, 1, 1));
         expect(model.selectBoxes.years).toEqual(range(2010, 2021));
@@ -559,11 +560,12 @@ describe('ngb-datepicker-service', () => {
         service.minDate = new NgbDate(2015, 1, 1);
         expect(model.selectBoxes.years).toEqual(range(2015, 2025));
 
+        // -500
         service.minDate = new NgbDate(1000, 1, 1);
-        expect(model.selectBoxes.years).toEqual(range(1000, 2025));
+        expect(model.selectBoxes.years).toEqual(range(1515, 2025));
       });
 
-      it(`should generate [min, +10] 'years' when min date is missing`, () => {
+      it(`should generate [-10, +500/max] 'years' when min date is missing`, () => {
         service.maxDate = new NgbDate(2010, 1, 1);
         service.open(new NgbDate(2009, 1, 1));
         expect(model.selectBoxes.years).toEqual(range(1999, 2010));
@@ -571,8 +573,9 @@ describe('ngb-datepicker-service', () => {
         service.maxDate = new NgbDate(2005, 1, 1);
         expect(model.selectBoxes.years).toEqual(range(1995, 2005));
 
+        // +500
         service.maxDate = new NgbDate(3000, 1, 1);
-        expect(model.selectBoxes.years).toEqual(range(1995, 3000));
+        expect(model.selectBoxes.years).toEqual(range(1995, 2505));
       });
 
       it(`should generate 'months' when min/max dates are missing`, () => {
@@ -1021,20 +1024,20 @@ describe('ngb-datepicker-service', () => {
       // months
       service.focus(date);
       service.focusMove('m', 1);
-      expect(model.focusDate).toEqual(new NgbDate(2017, 6, 1));
+      expect(model.focusDate).toEqual(new NgbDate(2017, 6, 5));
 
       service.focus(date);
       service.focusMove('m', -1);
-      expect(model.focusDate).toEqual(new NgbDate(2017, 4, 1));
+      expect(model.focusDate).toEqual(new NgbDate(2017, 4, 5));
 
       // years
       service.focus(date);
       service.focusMove('y', 1);
-      expect(model.focusDate).toEqual(new NgbDate(2018, 1, 1));
+      expect(model.focusDate).toEqual(new NgbDate(2018, 5, 5));
 
       service.focus(date);
       service.focusMove('y', -1);
-      expect(model.focusDate).toEqual(new NgbDate(2016, 1, 1));
+      expect(model.focusDate).toEqual(new NgbDate(2016, 5, 5));
     });
 
     it(`should move focus when 'minDate' changes`, () => {

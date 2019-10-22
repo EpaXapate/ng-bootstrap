@@ -3,47 +3,47 @@
 process.env.SAUCE_ACCESS_KEY = process.env.SAUCE_ACCESS_KEY.split('').reverse().join('');
 
 const BROWSERS = {
-  'SL_CHROME': {
+  'CHROME': {
     base: 'SauceLabs',
     browserName: 'chrome',
     version: 'latest'
   },
-  'SL_FIREFOX': {
+  'FIREFOX': {
     base: 'SauceLabs',
     browserName: 'firefox',
     version: 'latest'
   },
-  'SL_IE10': {
-    base: 'SauceLabs',
-    browserName: 'internet explorer',
-    platform: 'Windows 8',
-    version: '10'
-  },
-  'SL_IE11': {
-    base: 'SauceLabs',
-    browserName: 'internet explorer',
-    platform: 'Windows 8.1',
-    version: '11'
-  },
-  'SL_EDGE16': {
+  'EDGE16': {
     base: 'SauceLabs',
     browserName: 'MicrosoftEdge',
     platform: 'Windows 10',
     version: '16.16299'
   },
-  'SL_EDGE17': {
+  'EDGE17': {
     base: 'SauceLabs',
     browserName: 'MicrosoftEdge',
     platform: 'Windows 10',
     version: '17.17134'
   },
-  'SL_SAFARI11': {
+  'IE10': {
+    base: 'SauceLabs',
+    browserName: 'internet explorer',
+    platform: 'Windows 8',
+    version: '10'
+  },
+  'IE11': {
+    base: 'SauceLabs',
+    browserName: 'internet explorer',
+    platform: 'Windows 10',
+    version: '11'
+  },
+  'SAFARI11': {
     base: 'SauceLabs',
     browserName: 'safari',
     platform: 'macOS 10.13',
     version: '11'
   },
-  'SL_SAFARI12': {
+  'SAFARI12': {
     base: 'SauceLabs',
     browserName: 'safari',
     platform: 'macOS 10.13',
@@ -54,16 +54,16 @@ const BROWSERS = {
 module.exports = function (config) {
   config.set({
     basePath: '',
+    files: ['../node_modules/bootstrap/dist/css/bootstrap.min.css'],
     frameworks: ['jasmine', '@angular-devkit/build-angular'],
     plugins: [
       require('karma-jasmine'),
       require('karma-sauce-launcher'),
       require('@angular-devkit/build-angular/plugins/karma')
     ],
-    angularCli: {
-      environment: 'dev'
+    client: {
+      clearContext: false // leave Jasmine Spec Runner output visible in browser
     },
-
     sauceLabs: {
       build: `TRAVIS #${process.env.TRAVIS_BUILD_NUMBER} (${process.env.TRAVIS_BUILD_ID})`,
       tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER,
@@ -73,9 +73,9 @@ module.exports = function (config) {
       recordVideo: false,
       recordScreenshots: false,
       options: {
-        'command-timeout': 600,
-        'idle-timeout': 600,
-        'max-duration': 5400
+        commandTimeout: 600,
+        idleTimeout: 600,
+        maxDuration: 5400
       }
     },
 
@@ -86,7 +86,7 @@ module.exports = function (config) {
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
-    browsers: Object.keys(BROWSERS),
+    browsers: ['CHROME', 'FIREFOX', 'EDGE16', 'EDGE17', 'SAFARI11', 'SAFARI12'],
     singleRun: true,
     captureTimeout: 180000,
     browserDisconnectTimeout: 180000,

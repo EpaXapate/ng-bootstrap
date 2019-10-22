@@ -10,12 +10,14 @@ import {
   generateSelectBoxYears
 } from './datepicker-tools';
 import {NgbDate} from './ngb-date';
-import {NgbCalendar, NgbCalendarGregorian} from './ngb-calendar';
-import {TestBed} from '@angular/core/testing';
+import {NgbCalendarGregorian} from './ngb-calendar';
 import {DatepickerViewModel, NgbMarkDisabled, MonthViewModel} from './datepicker-view-model';
-import {NgbDatepickerI18n, NgbDatepickerI18nDefault} from './datepicker-i18n';
+import {NgbDatepickerI18nDefault} from './datepicker-i18n';
 
 describe(`datepicker-tools`, () => {
+
+  const calendar = new NgbCalendarGregorian();
+  const i18n = new NgbDatepickerI18nDefault('en');
 
   describe(`dateComparator()`, () => {
 
@@ -74,20 +76,6 @@ describe(`datepicker-tools`, () => {
   });
 
   describe(`buildMonth()`, () => {
-
-    let calendar: NgbCalendar;
-    let i18n: NgbDatepickerI18n;
-
-    beforeAll(() => {
-      TestBed.configureTestingModule({
-        providers: [
-          {provide: NgbCalendar, useClass: NgbCalendarGregorian},
-          {provide: NgbDatepickerI18n, useClass: NgbDatepickerI18nDefault}
-        ]
-      });
-      calendar = TestBed.get(NgbCalendar);
-      i18n = TestBed.get(NgbDatepickerI18n);
-    });
 
     // TODO: this should be automated somehow, ex. generate next 10 years or something
     const months = [
@@ -223,20 +211,6 @@ describe(`datepicker-tools`, () => {
   });
 
   describe(`buildMonths()`, () => {
-
-    let calendar: NgbCalendar;
-    let i18n: NgbDatepickerI18n;
-
-    beforeAll(() => {
-      TestBed.configureTestingModule({
-        providers: [
-          {provide: NgbCalendar, useClass: NgbCalendarGregorian},
-          {provide: NgbDatepickerI18n, useClass: NgbDatepickerI18nDefault}
-        ]
-      });
-      calendar = TestBed.get(NgbCalendar);
-      i18n = TestBed.get(NgbDatepickerI18n);
-    });
 
     it(`should generate 'displayMonths' number of months`, () => {
       let state = { displayMonths: 1, firstDayOfWeek: 1, months: [] } as DatepickerViewModel;
@@ -447,13 +421,6 @@ describe(`datepicker-tools`, () => {
 
   describe(`getFirstViewDate()`, () => {
 
-    let calendar: NgbCalendar;
-
-    beforeAll(() => {
-      TestBed.configureTestingModule({providers: [{provide: NgbCalendar, useClass: NgbCalendarGregorian}]});
-      calendar = TestBed.get(NgbCalendar);
-    });
-
     const months = [
       // Mon
       {start: 1, date: new NgbDate(2017, 1, 10), first: new NgbDate(2016, 12, 26)},
@@ -547,13 +514,6 @@ describe(`datepicker-tools`, () => {
 
   describe(`generateSelectBoxMonths`, () => {
 
-    let calendar: NgbCalendar;
-
-    beforeAll(() => {
-      TestBed.configureTestingModule({providers: [{provide: NgbCalendar, useClass: NgbCalendarGregorian}]});
-      calendar = TestBed.get(NgbCalendar);
-    });
-
     const test = (minDate, date, maxDate, result) => {
       expect(generateSelectBoxMonths(calendar, date, minDate, maxDate)).toEqual(result);
     };
@@ -606,17 +566,17 @@ describe(`datepicker-tools`, () => {
     it(`should generate years correctly`, () => {
       // both 'min' and 'max' are set
       test(new NgbDate(2017, 1, 1), new NgbDate(2018, 1, 1), new NgbDate(2019, 1, 1), range(2017, 2019));
-      test(new NgbDate(2000, 1, 1), new NgbDate(2018, 1, 1), new NgbDate(3000, 1, 1), range(2000, 3000));
+      test(new NgbDate(1000, 1, 1), new NgbDate(2018, 1, 1), new NgbDate(3000, 1, 1), range(1518, 2518));
       test(new NgbDate(2018, 1, 1), new NgbDate(2018, 1, 1), new NgbDate(2018, 1, 1), [2018]);
 
       // 'min' is not set
       test(null, new NgbDate(2018, 1, 1), new NgbDate(2019, 1, 1), range(2008, 2019));
-      test(null, new NgbDate(2018, 1, 1), new NgbDate(3000, 1, 1), range(2008, 3000));
+      test(null, new NgbDate(2018, 1, 1), new NgbDate(3000, 1, 1), range(2008, 2518));
       test(null, new NgbDate(2018, 1, 1), new NgbDate(2018, 1, 1), range(2008, 2018));
 
       // 'max' is not set
       test(new NgbDate(2017, 1, 1), new NgbDate(2018, 1, 1), null, range(2017, 2028));
-      test(new NgbDate(2000, 1, 1), new NgbDate(2018, 1, 1), null, range(2000, 2028));
+      test(new NgbDate(1000, 1, 1), new NgbDate(2018, 1, 1), null, range(1518, 2028));
       test(new NgbDate(2018, 1, 1), new NgbDate(2018, 1, 1), null, range(2018, 2028));
 
       // both are not set

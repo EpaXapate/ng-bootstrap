@@ -30,6 +30,23 @@
               "src/test/**"
             ],
             "karmaConfig": "src/karma.conf.js"
+          },
+          "configurations": {
+            "ie": {
+              "tsConfig": "src/tsconfig-ie.spec.json"
+            },
+            "saucelabs": {
+              "sourceMap": false,
+              "progress": false,
+              "karmaConfig": "src/karma.sauce.conf.js"
+            },
+            "saucelabs-ie": {
+              "sourceMap": false,
+              "progress": false,
+              "tsConfig": "src/tsconfig-ie.spec.json",
+              "karmaConfig": "src/karma.sauce.conf.js",
+              "browsers": "IE10,IE11"
+            }
           }
         },
         "lint": {
@@ -97,6 +114,9 @@
               "extractLicenses": true,
               "vendorChunk": false,
               "buildOptimizer": true
+            },
+            "ie": {
+              "tsConfig": "demo/tsconfig.ie.json"
             }
           }
         },
@@ -108,6 +128,24 @@
           "configurations": {
             "production": {
               "browserTarget": "demo:build:production"
+            },
+            "ie": {
+              "browserTarget": "demo:build:ie"
+            }
+          }
+        },
+        "e2e": {
+          "builder": "@angular-devkit/build-angular:protractor",
+          "options": {
+            "protractorConfig": "demo/protractor.conf.js",
+            "devServerTarget": "demo:serve"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "demo:serve:production"
+            },
+            "noserve": {
+              "devServerTarget": ""
             }
           }
         },
@@ -174,7 +212,7 @@
           "options": {
             "browserTarget": "e2e-app:build",
             "progress": false,
-            "extraWebpackConfig": "./coverage.webpack.js"
+            "extraWebpackConfig": "e2e-app/coverage.webpack.js"
           },
           "configurations": {
             "production": {

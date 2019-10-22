@@ -61,9 +61,16 @@ export interface NgbModalOptions {
   keyboard?: boolean;
 
   /**
+   * Scrollable modal content (false by default).
+   *
+   * @since 5.0.0
+   */
+  scrollable?: boolean;
+
+  /**
    * Size of a new modal window.
    */
-  size?: 'sm' | 'lg';
+  size?: 'sm' | 'lg' | 'xl';
 
   /**
    * A custom class to append to the modal window.
@@ -87,7 +94,16 @@ export interface NgbModalOptions {
 * @since 3.1.0
 */
 @Injectable({providedIn: 'root'})
-export class NgbModalConfig implements NgbModalOptions {
+export class NgbModalConfig implements Required<NgbModalOptions> {
+  ariaLabelledBy: string;
   backdrop: boolean | 'static' = true;
+  beforeDismiss: () => boolean | Promise<boolean>;
+  centered: boolean;
+  container: string;
+  injector: Injector;
   keyboard = true;
+  scrollable: boolean;
+  size: 'sm' | 'lg' | 'xl';
+  windowClass: string;
+  backdropClass: string;
 }
