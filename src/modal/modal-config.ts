@@ -43,10 +43,11 @@ export interface NgbModalOptions {
 
   /**
    * A selector specifying the element all new modal windows should be appended to.
+   * Since v5.3.0 it is also possible to pass the reference to an `HTMLElement`.
    *
    * If not specified, will be `body`.
    */
-  container?: string;
+  container?: string | HTMLElement;
 
   /**
    * The `Injector` to use for modal content.
@@ -70,7 +71,7 @@ export interface NgbModalOptions {
   /**
    * Size of a new modal window.
    */
-  size?: 'sm' | 'lg' | 'xl';
+  size?: 'sm' | 'lg' | 'xl' | string;
 
   /**
    * A custom class to append to the modal window.
@@ -103,7 +104,7 @@ export class NgbModalConfig implements Required<NgbModalOptions> {
   injector: Injector;
   keyboard = true;
   scrollable: boolean;
-  size: 'sm' | 'lg' | 'xl';
+  size: 'sm' | 'lg' | 'xl' | string;
   windowClass: string;
   backdropClass: string;
 }

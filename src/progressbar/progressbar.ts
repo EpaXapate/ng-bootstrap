@@ -1,5 +1,5 @@
-import {Component, Input, ChangeDetectionStrategy} from '@angular/core';
-import {getValueInRange} from '../util/util';
+import {ChangeDetectionStrategy, Component, Input, ViewEncapsulation} from '@angular/core';
+import {getValueInRange, isNumber} from '../util/util';
 import {NgbProgressbarConfig} from './progressbar-config';
 
 /**
@@ -8,21 +8,32 @@ import {NgbProgressbarConfig} from './progressbar-config';
 @Component({
   selector: 'ngb-progressbar',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
   template: `
     <div class="progress" [style.height]="height">
-      <div class="progress-bar{{type ? ' bg-' + type : ''}}{{animated ? ' progress-bar-animated' : ''}}{{striped ?
-    ' progress-bar-striped' : ''}}" role="progressbar" [style.width.%]="getPercentValue()"
-    [attr.aria-valuenow]="getValue()" aria-valuemin="0" [attr.aria-valuemax]="max">
+      <div class="progress-bar{{type ? ' bg-' + type : ''}}{{textType ? ' text-' + textType : ''}}
+      {{animated ? ' progress-bar-animated' : ''}}{{striped ? ' progress-bar-striped' : ''}}"
+      role="progressbar" [style.width.%]="getPercentValue()"
+      [attr.aria-valuenow]="getValue()" aria-valuemin="0" [attr.aria-valuemax]="max">
         <span *ngIf="showValue" i18n="@@ngb.progressbar.value">{{getPercentValue()}}%</span><ng-content></ng-content>
       </div>
     </div>
   `
 })
 export class NgbProgressbar {
+  private _max: number;
+
   /**
    * The maximal value to be displayed in the progress bar.
+   *
+   * Should be a positive number. Will default to 100 otherwise.
    */
-  @Input() max: number;
+  @Input()
+  set max(max: number) {
+    this._max = !isNumber(max) || max <= 0 ? 100 : max;
+  }
+
+  get max(): number { return this._max; }
 
   /**
    * If `true`, the stripes on the progress bar are animated.
@@ -40,6 +51,16 @@ export class NgbProgressbar {
    * If `true`, the current percentage will be shown in the `xx%` format.
    */
   @Input() showValue: boolean;
+
+  /**
+   * Optional text variant type of the progress bar.
+   *
+   * Supports types based on Bootstrap background color variants, like:
+   *  `"success"`, `"info"`, `"warning"`, `"danger"`, `"primary"`, `"secondary"`, `"dark"` and so on.
+   *
+   * @since 5.2.0
+   */
+  @Input() textType: string;
 
   /**
    * The type of the progress bar.
@@ -67,6 +88,7 @@ export class NgbProgressbar {
     this.max = config.max;
     this.animated = config.animated;
     this.striped = config.striped;
+    this.textType = config.textType;
     this.type = config.type;
     this.showValue = config.showValue;
     this.height = config.height;
