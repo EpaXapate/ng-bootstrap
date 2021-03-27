@@ -5,6 +5,8 @@ const angularTypes = require('@commitlint/config-angular-type-enum').value();
   Let's get widget names as valid list of scopes.
 */
 const scopes = [
+  'schematics',
+  'animations',
   ...fs.readdirSync("./src", {withFileTypes: true})
     .filter(d => d.isDirectory())
     .filter(d => !["test", "util"].includes(d.name))

@@ -10,13 +10,21 @@ import {
   forwardRef,
   Inject,
   Input,
+  OnDestroy,
   OnInit,
   Output,
   QueryList,
+  SimpleChanges,
   TemplateRef
 } from '@angular/core';
+import {DOCUMENT} from '@angular/common';
+
+import {Subject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
+
 import {isDefined} from '../util/util';
 import {NgbNavConfig} from './nav-config';
+import {Key} from '../util/key';
 
 const isValidNavId = (id: any) => isDefined(id) && id !== '';
 
@@ -87,6 +95,20 @@ export class NgbNavItem implements AfterContentChecked, OnInit {
    */
   @Input('ngbNavItem') _id: any;
 
+  /**
+   * An event emitted when the fade in transition is finished on the related nav content
+   *
+   * @since 8.0.0
+   */
+  @Output() shown = new EventEmitter<void>();
+
+  /**
+   * An event emitted when the fade out transition is finished on the related nav content
+   *
+   * @since 8.0.0
+   */
+  @Output() hidden = new EventEmitter<void>();
+
   contentTpl: NgbNavContent | null;
 
   @ContentChildren(NgbNavContent, {descendants: false}) contentTpls: QueryList<NgbNavContent>;
@@ -135,9 +157,19 @@ export class NgbNavItem implements AfterContentChecked, OnInit {
     '[class.flex-column]': `orientation === 'vertical'`,
     '[attr.aria-orientation]': `orientation === 'vertical' && roles === 'tablist' ? 'vertical' : undefined`,
     '[attr.role]': `role ? role : roles ? 'tablist' : undefined`,
+    '(keydown.arrowLeft)': 'onKeyDown($event)',
+    '(keydown.arrowRight)': 'onKeyDown($event)',
+    '(keydown.arrowDown)': 'onKeyDown($event)',
+    '(keydown.arrowUp)': 'onKeyDown($event)',
+    '(keydown.Home)': 'onKeyDown($event)',
+    '(keydown.End)': 'onKeyDown($event)'
   }
 })
-export class NgbNav implements AfterContentInit {
+export class NgbNav implements AfterContentInit,
+    OnDestroy {
+  static ngAcceptInputType_orientation: string;
+  static ngAcceptInputType_roles: boolean | string;
+
   /**
    * The id of the nav that should be active
    *
@@ -152,6 +184,13 @@ export class NgbNav implements AfterContentInit {
    * If you want to prevent nav change, you should use `(navChange)` event
    */
   @Output() activeIdChange = new EventEmitter<any>();
+
+  /**
+   * If `true`, nav change will be animated.
+   *
+   * @since 8.0.0
+   */
+  @Input() animation: boolean;
 
   /**
    * If `true`, non-active nav content will be removed from DOM
@@ -173,12 +212,51 @@ export class NgbNav implements AfterContentInit {
    */
   @Input() roles: 'tablist' | false;
 
-  @ContentChildren(NgbNavItem) items: QueryList<NgbNavItem>;
+  /**
+   * Keyboard support for nav focus/selection using arrow keys.
+   *
+   * * `false` - no keyboard support.
+   * * `true` - navs will be focused using keyboard arrow keys
+   * * `'changeWithArrows'` -  nav will be selected using keyboard arrow keys
+   *
+   * See the [list of available keyboard shortcuts](#/components/nav/overview#keyboard-shortcuts).
+   *
+   * @since 6.1.0
+ */
+  @Input() keyboard: boolean | 'changeWithArrows';
 
-  constructor(@Attribute('role') public role: string, config: NgbNavConfig, private _cd: ChangeDetectorRef) {
+  /**
+   * An event emitted when the fade in transition is finished for one of the items.
+   *
+   * Payload of the event is the nav id that was just shown.
+   *
+   * @since 8.0.0
+   */
+  @Output() shown = new EventEmitter<any>();
+
+  /**
+   * An event emitted when the fade out transition is finished for one of the items.
+   *
+   * Payload of the event is the nav id that was just hidden.
+   *
+   * @since 8.0.0
+   */
+  @Output() hidden = new EventEmitter<any>();
+
+  @ContentChildren(NgbNavItem) items: QueryList<NgbNavItem>;
+  @ContentChildren(forwardRef(() => NgbNavLink), {descendants: true}) links: QueryList<NgbNavLink>;
+
+  destroy$ = new Subject<void>();
+  navItemChange$ = new Subject<NgbNavItem | null>();
+
+  constructor(
+      @Attribute('role') public role: string, config: NgbNavConfig, private _cd: ChangeDetectorRef,
+      @Inject(DOCUMENT) private _document: any) {
+    this.animation = config.animation;
     this.destroyOnHide = config.destroyOnHide;
     this.orientation = config.orientation;
     this.roles = config.roles;
+    this.keyboard = config.keyboard;
   }
 
   /**
@@ -196,6 +274,65 @@ export class NgbNav implements AfterContentInit {
     }
   }
 
+  onKeyDown(event: KeyboardEvent) {
+    if (this.roles !== 'tablist' || !this.keyboard) {
+      return;
+    }
+    // tslint:disable-next-line: deprecation
+    const key = event.which;
+    const enabledLinks = this.links.filter(link => !link.navItem.disabled);
+    const {length} = enabledLinks;
+
+    let position = -1;
+
+    enabledLinks.forEach((link, index) => {
+      if (link.elRef.nativeElement === this._document.activeElement) {
+        position = index;
+      }
+    });
+
+    if (length) {
+      switch (key) {
+        case Key.ArrowLeft:
+          if (this.orientation === 'vertical') {
+            return;
+          }
+          position = (position - 1 + length) % length;
+          break;
+        case Key.ArrowRight:
+          if (this.orientation === 'vertical') {
+            return;
+          }
+          position = (position + 1) % length;
+          break;
+        case Key.ArrowDown:
+          if (this.orientation === 'horizontal') {
+            return;
+          }
+          position = (position + 1) % length;
+          break;
+        case Key.ArrowUp:
+          if (this.orientation === 'horizontal') {
+            return;
+          }
+          position = (position - 1 + length) % length;
+          break;
+        case Key.Home:
+          position = 0;
+          break;
+        case Key.End:
+          position = length - 1;
+          break;
+      }
+      if (this.keyboard === 'changeWithArrows') {
+        this.select(enabledLinks[position].navItem.id);
+      }
+      enabledLinks[position].elRef.nativeElement.focus();
+
+      event.preventDefault();
+    }
+  }
+
   /**
    * Selects the nav with the given id and shows its associated pane.
    * Any other nav that was previously selected becomes unselected and its associated pane is hidden.
@@ -210,7 +347,17 @@ export class NgbNav implements AfterContentInit {
         this._cd.detectChanges();
       }
     }
+
+    this.items.changes.pipe(takeUntil(this.destroy$)).subscribe(() => this._notifyItemChanged(this.activeId));
   }
+
+  ngOnChanges({activeId}: SimpleChanges): void {
+    if (activeId && !activeId.firstChange) {
+      this._notifyItemChanged(activeId.currentValue);
+    }
+  }
+
+  ngOnDestroy() { this.destroy$.next(); }
 
   private _updateActiveId(nextId: any, emitNavChange = true) {
     if (this.activeId !== nextId) {
@@ -223,8 +370,15 @@ export class NgbNav implements AfterContentInit {
       if (!defaultPrevented) {
         this.activeId = nextId;
         this.activeIdChange.emit(nextId);
+        this._notifyItemChanged(nextId);
       }
     }
+  }
+
+  private _notifyItemChanged(nextItemId: any) { this.navItemChange$.next(this._getItemById(nextItemId)); }
+
+  private _getItemById(itemId: any): NgbNavItem | null {
+    return this.items && this.items.find(item => item.id === itemId) || null;
   }
 }
 
@@ -252,7 +406,9 @@ export class NgbNav implements AfterContentInit {
   }
 })
 export class NgbNavLink {
-  constructor(@Attribute('role') public role: string, public navItem: NgbNavItem, public nav: NgbNav) {}
+  constructor(
+      @Attribute('role') public role: string, public navItem: NgbNavItem, public nav: NgbNav,
+      public elRef: ElementRef) {}
 
   hasNavItemClass() {
     // with alternative markup we have to add `.nav-item` class, because `ngbNavItem` is on the ng-container
@@ -268,16 +424,16 @@ export class NgbNavLink {
  *
  * @since 5.2.0
  */
-export interface NgbNavChangeEvent {
+export interface NgbNavChangeEvent<T = any> {
   /**
    * Id of the currently active nav.
    */
-  activeId: any;
+  activeId: T;
 
   /**
    * Id of the newly selected nav.
    */
-  nextId: any;
+  nextId: T;
 
   /**
    * Function that will prevent nav change if called.

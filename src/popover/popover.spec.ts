@@ -1,5 +1,5 @@
 import {TestBed, ComponentFixture, inject} from '@angular/core/testing';
-import {createGenericTestComponent, triggerEvent} from '../test/common';
+import {createGenericTestComponent, isBrowser, isBrowserVisible, triggerEvent} from '../test/common';
 
 import {By} from '@angular/platform-browser';
 import {
@@ -10,12 +10,16 @@ import {
   OnDestroy,
   TemplateRef,
   ViewContainerRef,
-  AfterViewInit
+  AfterViewInit,
+  NgZone
 } from '@angular/core';
 
 import {NgbPopoverModule} from './popover.module';
 import {NgbPopoverWindow, NgbPopover} from './popover';
 import {NgbPopoverConfig} from './popover-config';
+import {NgbTooltip, NgbTooltipModule} from '..';
+import {NgbConfig} from '../ngb-config';
+import {NgbConfigAnimation} from '../test/ngb-config-animation';
 
 @Injectable()
 class SpyService {
@@ -28,6 +32,10 @@ const createTestComponent = (html: string) =>
 const createOnPushTestComponent =
     (html: string) => <ComponentFixture<TestOnPushComponent>>createGenericTestComponent(html, TestOnPushComponent);
 
+function getWindow(element) {
+  return element.querySelector('ngb-popover-window');
+}
+
 describe('ngb-popover-window', () => {
   beforeEach(() => { TestBed.configureTestingModule({declarations: [TestComponent], imports: [NgbPopoverModule]}); });
 
@@ -35,7 +43,7 @@ describe('ngb-popover-window', () => {
     // Cleaning elements, because of a TestBed issue with the id attribute
     Array.from(document.body.children).map((element: HTMLElement) => {
       if (element.tagName.toLocaleLowerCase() === 'div') {
-        element.parentNode.removeChild(element);
+        element.parentNode !.removeChild(element);
       }
     });
   });
@@ -46,6 +54,8 @@ describe('ngb-popover-window', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement).toHaveCssClass('popover');
+    expect(fixture.nativeElement).not.toHaveCssClass('show');
+    expect(fixture.nativeElement).not.toHaveCssClass('fade');
     expect(fixture.nativeElement).not.toHaveCssClass('bs-popover-top');
     expect(fixture.nativeElement.getAttribute('role')).toBe('tooltip');
     expect(fixture.nativeElement.querySelector('.popover-header').textContent).toBe('Test title');
@@ -74,8 +84,6 @@ describe('ngb-popover', () => {
     });
   });
 
-  function getWindow(element) { return element.querySelector('ngb-popover-window'); }
-
   describe('basic functionality', () => {
 
     it('should open and close a popover - default settings and content as string', () => {
@@ -90,6 +98,8 @@ describe('ngb-popover', () => {
 
       expect(windowEl).toHaveCssClass('popover');
       expect(windowEl).toHaveCssClass('bs-popover-top');
+      expect(windowEl).toHaveCssClass('show');
+      expect(windowEl).not.toHaveCssClass('fade');
       expect(windowEl.textContent.trim()).toBe('TitleGreat tip!');
       expect(windowEl.getAttribute('role')).toBe('tooltip');
       expect(windowEl.parentNode).toBe(fixture.nativeElement);
@@ -243,6 +253,16 @@ describe('ngb-popover', () => {
     });
 
     it('should not show a header if title is empty', () => {
+      const fixture = createTestComponent(`<div ngbPopover="Great tip!" popoverTitle=""></div>`);
+      const directive = fixture.debugElement.query(By.directive(NgbPopover));
+
+      triggerEvent(directive, 'click');
+      fixture.detectChanges();
+      const windowEl = getWindow(fixture.nativeElement);
+      expect(windowEl.querySelector('.popover-header')).toBeNull();
+    });
+
+    it('should not show a header if title is falsy', () => {
       const fixture = createTestComponent(`<div ngbPopover="Great tip!"></div>`);
       const directive = fixture.debugElement.query(By.directive(NgbPopover));
 
@@ -492,8 +512,8 @@ describe('ngb-popover', () => {
           `<div ngbPopover="Great tip!" triggers="click" (shown)="shown()" (hidden)="hidden()"></div>`);
       const directive = fixture.debugElement.query(By.directive(NgbPopover));
 
-      let shownSpy = spyOn(fixture.componentInstance, 'shown');
-      let hiddenSpy = spyOn(fixture.componentInstance, 'hidden');
+      let shownSpy = spyOn(fixture.componentInstance, 'shown').and.callThrough();
+      let hiddenSpy = spyOn(fixture.componentInstance, 'hidden').and.callThrough();
 
       triggerEvent(directive, 'click');
       fixture.detectChanges();
@@ -693,7 +713,7 @@ describe('ngb-popover', () => {
   });
 
   describe('Custom config as provider', () => {
-    let config = new NgbPopoverConfig();
+    let config = new NgbPopoverConfig(new NgbConfig());
     config.placement = 'bottom';
     config.triggers = 'hover';
     config.popoverClass = 'my-custom-class';
@@ -730,6 +750,147 @@ describe('ngb-popover', () => {
   });
 });
 
+describe('popover-tooltip', () => {
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({declarations: [TestComponent], imports: [NgbPopoverModule, NgbTooltipModule]});
+  });
+
+  it(`should work when attached on the same element and container='body'`, () => {
+    const fixture = createTestComponent(`<button ngbPopover="Popover" ngbTooltip="Tooltip" container="body"></button>`);
+    const button = fixture.nativeElement.querySelector('button');
+    const tooltip = fixture.debugElement.query(By.directive(NgbTooltip)).injector.get(NgbTooltip);
+    const popover = fixture.debugElement.query(By.directive(NgbPopover)).injector.get(NgbPopover);
+
+    tooltip.open();
+    expect(tooltip.isOpen()).toBe(true);
+    expect(popover.isOpen()).toBe(false);
+
+    // this should open the popover and have produced the "Error: Failed to execute 'insertBefore' on 'Node':
+    // The node before which the new node is to be inserted is not a child of this node." exception with ivy
+    button.click();
+  });
+});
+
+if (isBrowserVisible('ngb-popover animations')) {
+  describe('ngb-popover animations', () => {
+
+    @Component({
+      template: `<button ngbPopover="Great tip!" triggers="click" (shown)="shown()" (hidden)="hidden()"></button>`,
+      host: {'[class.ngb-reduce-motion]': 'reduceMotion'}
+    })
+    class TestAnimationComponent {
+      reduceMotion = true;
+      shown = () => {};
+      hidden = () => {};
+    }
+
+    function expectPopover(el: HTMLElement, classes: string[], noClasses: string[], opacity: string) {
+      classes.forEach(c => expect(el).toHaveCssClass(c));
+      noClasses.forEach(c => expect(el).not.toHaveCssClass(c));
+      if (!isBrowser('ie')) {
+        expect(window.getComputedStyle(el).opacity).toBe(opacity);
+      }
+    }
+
+    beforeEach(() => {
+      TestBed.configureTestingModule({
+        declarations: [TestAnimationComponent],
+        imports: [NgbPopoverModule],
+        providers: [{provide: NgbConfig, useClass: NgbConfigAnimation}]
+      });
+    });
+
+    it(`should run transition when toggling popover (force-reduced-motion = true)`, () => {
+      const fixture = TestBed.createComponent(TestAnimationComponent);
+      fixture.componentInstance.reduceMotion = true;
+      fixture.detectChanges();
+
+      const buttonEl = fixture.nativeElement.querySelector('button');
+      expect(getWindow(fixture.nativeElement)).toBeNull();
+
+      const shownSpy = spyOn(fixture.componentInstance, 'shown');
+      const hiddenSpy = spyOn(fixture.componentInstance, 'hidden');
+
+      // 1. Opening popover
+      buttonEl.click();
+      fixture.detectChanges();
+
+      expect(shownSpy).toHaveBeenCalledTimes(1);
+      expect(hiddenSpy).not.toHaveBeenCalled();
+      expectPopover(getWindow(fixture.nativeElement), ['show', 'fade'], [], '1');
+
+      // 2. Closing popover
+      buttonEl.click();
+      fixture.detectChanges();
+
+      expect(shownSpy).toHaveBeenCalledTimes(1);
+      expect(hiddenSpy).toHaveBeenCalledTimes(1);
+      expect(getWindow(fixture.nativeElement)).toBeNull();
+    });
+
+    it(`should run transition when toggling popover (force-reduced-motion = false)`, (done) => {
+      const fixture = TestBed.createComponent(TestAnimationComponent);
+      fixture.componentInstance.reduceMotion = false;
+      fixture.detectChanges();
+
+      const buttonEl = fixture.nativeElement.querySelector('button');
+      expect(getWindow(fixture.nativeElement)).toBeNull();
+
+      spyOn(fixture.componentInstance, 'shown').and.callFake(() => {
+        expectPopover(getWindow(fixture.nativeElement), ['show', 'fade'], [], '1');
+
+        // 2. Closing popover
+        buttonEl.click();
+        fixture.detectChanges();
+
+        expectPopover(getWindow(fixture.nativeElement), ['fade'], ['show'], '1');
+      });
+
+      spyOn(fixture.componentInstance, 'hidden').and.callFake(() => {
+        expect(getWindow(fixture.nativeElement)).toBeNull();
+        done();
+      });
+
+      // 1. Opening popover
+      buttonEl.click();
+      fixture.detectChanges();
+
+      expectPopover(getWindow(fixture.nativeElement), ['show', 'fade'], [], '0');
+    });
+
+    it(`should revert popover opening`, (done) => {
+      const fixture = TestBed.createComponent(TestAnimationComponent);
+      fixture.componentInstance.reduceMotion = false;
+      fixture.detectChanges();
+
+      const buttonEl = fixture.nativeElement.querySelector('button');
+      expect(getWindow(fixture.nativeElement)).toBeNull();
+
+      const shownSpy = spyOn(fixture.componentInstance, 'shown');
+
+      // 3. Popover is closed
+      spyOn(fixture.componentInstance, 'hidden').and.callFake(() => {
+        expect(getWindow(fixture.nativeElement)).toBeNull();
+        expect(shownSpy).not.toHaveBeenCalled();
+        done();
+      });
+
+      // 1. Opening popover
+      buttonEl.click();
+      fixture.detectChanges();
+
+      expectPopover(getWindow(fixture.nativeElement), ['show', 'fade'], [], '0');
+
+      // 2. Reverting popover opening
+      buttonEl.click();
+      fixture.detectChanges();
+
+      expectPopover(getWindow(fixture.nativeElement), ['fade'], ['show'], '0');
+    });
+  });
+}
+
 @Component({selector: 'test-cmpt', template: ``})
 export class TestComponent {
   name = 'World';
@@ -747,8 +908,8 @@ export class TestComponent {
     this._vcRef.remove(0);
   }
 
-  shown() {}
-  hidden() {}
+  shown() { expect(NgZone.isInAngularZone()).toBe(true, `'shown' should run inside the Angular zone`); }
+  hidden() { expect(NgZone.isInAngularZone()).toBe(true, `'hidden' should run inside the Angular zone`); }
 }
 
 @Component({selector: 'test-onpush-cmpt', changeDetection: ChangeDetectionStrategy.OnPush, template: ``})

@@ -93,8 +93,8 @@ describe('ngb-datepicker-navigation', () => {
     const fixture =
         createTestComponent(`<ngb-datepicker-navigation (navigate)="onNavigate($event)"></ngb-datepicker-navigation>`);
     const[previousButton, nextButton] = getNavigationLinks(fixture.nativeElement);
-    const previousButtonSpan = previousButton.querySelector<HTMLElement>('span');
-    const nextButtonSpan = nextButton.querySelector<HTMLElement>('span');
+    const previousButtonSpan = previousButton.querySelector<HTMLElement>('span') !;
+    const nextButtonSpan = nextButton.querySelector<HTMLElement>('span') !;
     spyOn(fixture.componentInstance, 'onNavigate');
 
     // prev
@@ -150,6 +150,6 @@ class TestComponent {
   showSelect = true;
   selectBoxes = {months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], years: [2015, 2016, 2017, 2018, 2019, 2020]};
 
-  onNavigate = () => {};
-  onSelect = () => {};
+  onNavigate = (event) => {};
+  onSelect = (date) => {};
 }

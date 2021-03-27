@@ -1,8 +1,10 @@
 import {
   AfterContentChecked,
+  ChangeDetectorRef,
   Component,
   ContentChildren,
   Directive,
+  ElementRef,
   EventEmitter,
   Host,
   Input,
@@ -10,12 +12,16 @@ import {
   Output,
   QueryList,
   TemplateRef,
-  ViewEncapsulation
+  ViewEncapsulation,
+  NgZone,
 } from '@angular/core';
 
 import {isString} from '../util/util';
 
 import {NgbAccordionConfig} from './accordion-config';
+import {ngbRunTransition} from '../util/transition/ngbTransition';
+import {ngbCollapsingTransition} from '../util/transition/ngbCollapseTransition';
+import {take} from 'rxjs/operators';
 
 let nextId = 0;
 
@@ -82,6 +88,12 @@ export class NgbPanel implements AfterContentChecked {
 
   isOpen = false;
 
+  /* A flag to specified that the transition panel classes have been initialized */
+  initClassDone = false;
+
+  /* A flag to specified if the panel is currently being animated, to ensure its presence in the dom */
+  transitionRunning = false;
+
   /**
    *  The panel title.
    *
@@ -104,9 +116,24 @@ export class NgbPanel implements AfterContentChecked {
    */
   @Input() cardClass: string;
 
-  titleTpl: NgbPanelTitle | null;
-  headerTpl: NgbPanelHeader | null;
-  contentTpl: NgbPanelContent | null;
+  /**
+   * An event emitted when the panel is shown, after the transition. It has no payload.
+   *
+   * @since 8.0.0
+   */
+  @Output() shown = new EventEmitter<void>();
+
+  /**
+   * An event emitted when the panel is hidden, after the transition. It has no payload.
+   *
+   * @since 8.0.0
+   */
+  @Output() hidden = new EventEmitter<void>();
+
+
+  titleTpl: NgbPanelTitle;
+  headerTpl: NgbPanelHeader;
+  contentTpl: NgbPanelContent;
 
   @ContentChildren(NgbPanelTitle, {descendants: false}) titleTpls: QueryList<NgbPanelTitle>;
   @ContentChildren(NgbPanelHeader, {descendants: false}) headerTpls: QueryList<NgbPanelHeader>;
@@ -128,7 +155,7 @@ export class NgbPanel implements AfterContentChecked {
  */
 export interface NgbPanelChangeEvent {
   /**
-   * The id of the accordion panel that is being toggled.
+   * The id of the accordion panel being toggled.
    */
   panelId: string;
 
@@ -169,9 +196,9 @@ export interface NgbPanelChangeEvent {
                        [ngTemplateOutletContext]="{$implicit: panel, opened: panel.isOpen}"></ng-template>
         </div>
         <div id="{{panel.id}}" role="tabpanel" [attr.aria-labelledby]="panel.id + '-header'"
-             class="collapse" [class.show]="panel.isOpen" *ngIf="!destroyOnHide || panel.isOpen">
+             *ngIf="!destroyOnHide || panel.isOpen || panel.transitionRunning">
           <div class="card-body">
-               <ng-template [ngTemplateOutlet]="panel.contentTpl?.templateRef"></ng-template>
+               <ng-template [ngTemplateOutlet]="panel.contentTpl?.templateRef || null"></ng-template>
           </div>
         </div>
       </div>
@@ -180,6 +207,13 @@ export interface NgbPanelChangeEvent {
 })
 export class NgbAccordion implements AfterContentChecked {
   @ContentChildren(NgbPanel) panels: QueryList<NgbPanel>;
+
+  /**
+   * If `true`, accordion will be animated.
+   *
+   * @since 8.0.0
+   */
+  @Input() animation;
 
   /**
    * An array or comma separated strings of panel ids that should be opened **initially**.
@@ -216,7 +250,25 @@ export class NgbAccordion implements AfterContentChecked {
    */
   @Output() panelChange = new EventEmitter<NgbPanelChangeEvent>();
 
-  constructor(config: NgbAccordionConfig) {
+  /**
+   * An event emitted when the expanding animation is finished on the panel. The payload is the panel id.
+   *
+   * @since 8.0.0
+   */
+  @Output() shown = new EventEmitter<string>();
+
+  /**
+   * An event emitted when the collapsing animation is finished on the panel, and before the panel element is removed.
+   * The payload is the panel id.
+   *
+   * @since 8.0.0
+   */
+  @Output() hidden = new EventEmitter<string>();
+
+  constructor(
+      config: NgbAccordionConfig, private _element: ElementRef, private _ngZone: NgZone,
+      private _changeDetector: ChangeDetectorRef) {
+    this.animation = config.animation;
     this.type = config.type;
     this.closeOtherPanels = config.closeOthers;
   }
@@ -281,17 +333,37 @@ export class NgbAccordion implements AfterContentChecked {
     }
 
     // update panels open states
-    this.panels.forEach(panel => panel.isOpen = !panel.disabled && this.activeIds.indexOf(panel.id) > -1);
+    this.panels.forEach(panel => { panel.isOpen = !panel.disabled && this.activeIds.indexOf(panel.id) > -1; });
 
     // closeOthers updates
     if (this.activeIds.length > 1 && this.closeOtherPanels) {
-      this._closeOthers(this.activeIds[0]);
+      this._closeOthers(this.activeIds[0], false);
       this._updateActiveIds();
     }
+
+    // Setup the initial classes here
+    this._ngZone.onStable.pipe(take(1)).subscribe(() => {
+      this.panels.forEach(panel => {
+        const panelElement = this._getPanelElement(panel.id);
+        if (panelElement) {
+          if (!panel.initClassDone) {
+            panel.initClassDone = true;
+            ngbRunTransition(this._ngZone, panelElement, ngbCollapsingTransition, {
+              animation: false,
+              runningTransition: 'continue',
+              context: {direction: panel.isOpen ? 'show' : 'hide'}
+            });
+          }
+        } else {
+          // Classes must be initialized next time it will be in the dom
+          panel.initClassDone = false;
+        }
+      });
+    });
   }
 
-  private _changeOpenState(panel: NgbPanel, nextState: boolean) {
-    if (panel && !panel.disabled && panel.isOpen !== nextState) {
+  private _changeOpenState(panel: NgbPanel | null, nextState: boolean) {
+    if (panel != null && !panel.disabled && panel.isOpen !== nextState) {
       let defaultPrevented = false;
 
       this.panelChange.emit(
@@ -299,27 +371,63 @@ export class NgbAccordion implements AfterContentChecked {
 
       if (!defaultPrevented) {
         panel.isOpen = nextState;
+        panel.transitionRunning = true;
 
         if (nextState && this.closeOtherPanels) {
           this._closeOthers(panel.id);
         }
         this._updateActiveIds();
+        this._runTransitions(this.animation);
       }
     }
   }
 
-  private _closeOthers(panelId: string) {
+  private _closeOthers(panelId: string, enableTransition = true) {
     this.panels.forEach(panel => {
-      if (panel.id !== panelId) {
+      if (panel.id !== panelId && panel.isOpen) {
         panel.isOpen = false;
+        panel.transitionRunning = enableTransition;
       }
     });
   }
 
-  private _findPanelById(panelId: string): NgbPanel | null { return this.panels.find(p => p.id === panelId); }
+  private _findPanelById(panelId: string): NgbPanel | null { return this.panels.find(p => p.id === panelId) || null; }
 
   private _updateActiveIds() {
     this.activeIds = this.panels.filter(panel => panel.isOpen && !panel.disabled).map(panel => panel.id);
+  }
+
+  private _runTransitions(animation: boolean) {
+    // detectChanges is performed to ensure that all panels are in the dom (via transitionRunning = true)
+    // before starting the animation
+    this._changeDetector.detectChanges();
+
+    this.panels.forEach(panel => {
+      // When panel.transitionRunning is true, the transition needs to be started OR reversed,
+      // The direction (show or hide) is choosen by each panel.isOpen state
+      if (panel.transitionRunning) {
+        const panelElement = this._getPanelElement(panel.id);
+        ngbRunTransition(this._ngZone, panelElement !, ngbCollapsingTransition, {
+          animation,
+          runningTransition: 'stop',
+          context: {direction: panel.isOpen ? 'show' : 'hide'}
+        }).subscribe(() => {
+          panel.transitionRunning = false;
+          const {id} = panel;
+          if (panel.isOpen) {
+            panel.shown.emit();
+            this.shown.emit(id);
+          } else {
+            panel.hidden.emit();
+            this.hidden.emit(id);
+          }
+        });
+      }
+    });
+  }
+
+  private _getPanelElement(panelId: string): HTMLElement | null {
+    return this._element.nativeElement.querySelector('#' + panelId);
   }
 }
 
@@ -342,6 +450,8 @@ export class NgbAccordion implements AfterContentChecked {
   }
 })
 export class NgbPanelToggle {
+  static ngAcceptInputType_ngbPanelToggle: NgbPanel | '';
+
   @Input()
   set ngbPanelToggle(panel: NgbPanel) {
     if (panel) {

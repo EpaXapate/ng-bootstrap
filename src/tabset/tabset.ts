@@ -1,3 +1,4 @@
+// tslint:disable:deprecation
 import {
   AfterContentChecked,
   Component,
@@ -18,6 +19,8 @@ let nextId = 0;
  * A directive to wrap tab titles that need to contain HTML markup or other directives.
  *
  * Alternatively you could use the `NgbTab.title` input for string titles.
+ *
+ * @deprecated 6.0.0 Please use NgbNav instead
  */
 @Directive({selector: 'ng-template[ngbTabTitle]'})
 export class NgbTabTitle {
@@ -26,6 +29,8 @@ export class NgbTabTitle {
 
 /**
  * A directive to wrap content to be displayed in a tab.
+ *
+ * @deprecated 6.0.0 Please use NgbNav instead
  */
 @Directive({selector: 'ng-template[ngbTabContent]'})
 export class NgbTabContent {
@@ -34,6 +39,8 @@ export class NgbTabContent {
 
 /**
  * A directive representing an individual tab.
+ *
+ * @deprecated 6.0.0 Please use NgbNav instead
  */
 @Directive({selector: 'ngb-tab'})
 export class NgbTab implements AfterContentChecked {
@@ -74,6 +81,8 @@ export class NgbTab implements AfterContentChecked {
 
 /**
  * The payload of the change event fired right before the tab change.
+ *
+ * @deprecated 6.0.0 Please use NgbNav instead
  */
 export interface NgbTabChangeEvent {
   /**
@@ -94,6 +103,8 @@ export interface NgbTabChangeEvent {
 
 /**
  * A component that makes it easy to create tabbed interface.
+ *
+ * @deprecated 6.0.0 Please use NgbNav instead
  */
 @Component({
   selector: 'ngb-tabset',
@@ -106,7 +117,7 @@ export interface NgbTabChangeEvent {
           href (click)="select(tab.id); $event.preventDefault()" role="tab" [attr.tabindex]="(tab.disabled ? '-1': undefined)"
           [attr.aria-controls]="(!destroyOnHide || tab.id === activeId ? tab.id + '-panel' : null)"
           [attr.aria-selected]="tab.id === activeId" [attr.aria-disabled]="tab.disabled">
-          {{tab.title}}<ng-template [ngTemplateOutlet]="tab.titleTpl?.templateRef"></ng-template>
+          {{tab.title}}<ng-template [ngTemplateOutlet]="tab.titleTpl?.templateRef || null"></ng-template>
         </a>
       </li>
     </ul>
@@ -117,13 +128,16 @@ export interface NgbTabChangeEvent {
           *ngIf="!destroyOnHide || tab.id === activeId"
           role="tabpanel"
           [attr.aria-labelledby]="tab.id" id="{{tab.id}}-panel">
-          <ng-template [ngTemplateOutlet]="tab.contentTpl?.templateRef"></ng-template>
+          <ng-template [ngTemplateOutlet]="tab.contentTpl?.templateRef || null"></ng-template>
         </div>
       </ng-template>
     </div>
   `
 })
 export class NgbTabset implements AfterContentChecked {
+  static ngAcceptInputType_justify: string;
+  static ngAcceptInputType_orientation: string;
+
   justifyClass: string;
 
   @ContentChildren(NgbTab) tabs: QueryList<NgbTab>;
@@ -202,11 +216,11 @@ export class NgbTabset implements AfterContentChecked {
   ngAfterContentChecked() {
     // auto-correct activeId that might have been set incorrectly as input
     let activeTab = this._getTabById(this.activeId);
-    this.activeId = activeTab ? activeTab.id : (this.tabs.length ? this.tabs.first.id : null);
+    this.activeId = activeTab ? activeTab.id : (this.tabs.length ? this.tabs.first.id : <any>null);
   }
 
   private _getTabById(id: string): NgbTab {
     let tabsWithId: NgbTab[] = this.tabs.filter(tab => tab.id === id);
-    return tabsWithId.length ? tabsWithId[0] : null;
+    return tabsWithId.length ? tabsWithId[0] : <any>null;
   }
 }

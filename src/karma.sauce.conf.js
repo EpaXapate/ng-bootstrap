@@ -1,4 +1,4 @@
-// Configuration used testing via Sauce Labs on Travis CI
+// Configuration used testing via Sauce Labs on GitHub CI
 
 process.env.SAUCE_ACCESS_KEY = process.env.SAUCE_ACCESS_KEY.split('').reverse().join('');
 
@@ -13,11 +13,11 @@ const BROWSERS = {
     browserName: 'firefox',
     version: 'latest'
   },
-  'EDGE17': {
+  'EDGE': {
     base: 'SauceLabs',
     browserName: 'MicrosoftEdge',
     platform: 'Windows 10',
-    version: '17.17134'
+    version: 'latest'
   },
   'EDGE18': {
     base: 'SauceLabs',
@@ -25,22 +25,10 @@ const BROWSERS = {
     platform: 'Windows 10',
     version: '18.17763'
   },
-  'IE10': {
-    base: 'SauceLabs',
-    browserName: 'internet explorer',
-    platform: 'Windows 8',
-    version: '10'
-  },
   'IE11': {
     base: 'SauceLabs',
     browserName: 'internet explorer',
     platform: 'Windows 10',
-    version: '11'
-  },
-  'SAFARI11': {
-    base: 'SauceLabs',
-    browserName: 'safari',
-    platform: 'macOS 10.13',
     version: '11'
   },
   'SAFARI12': {
@@ -49,12 +37,18 @@ const BROWSERS = {
     platform: 'macOS 10.14',
     version: '12'
   },
+  'SAFARI13': {
+    base: 'SauceLabs',
+    browserName: 'safari',
+    platform: 'macOS 10.15',
+    version: '13'
+  },
 };
 
 module.exports = function (config) {
   config.set({
     basePath: '',
-    files: ['../node_modules/bootstrap/dist/css/bootstrap.min.css'],
+    files: ['../node_modules/bootstrap/dist/css/bootstrap.min.css', '../src/test/test-styles.css'],
     frameworks: ['jasmine', '@angular-devkit/build-angular'],
     plugins: [
       require('karma-jasmine'),
@@ -65,8 +59,8 @@ module.exports = function (config) {
       clearContext: false // leave Jasmine Spec Runner output visible in browser
     },
     sauceLabs: {
-      build: `TRAVIS #${process.env.TRAVIS_BUILD_NUMBER} (${process.env.TRAVIS_BUILD_ID})`,
-      tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER,
+      build: `GitHub run #${process.env.GITHUB_RUN_ID}`,
+      tunnelIdentifier: process.env.GITHUB_RUN_ID,
       testName: 'ng-bootstrap',
       retryLimit: 3,
       startConnect: false,
@@ -86,7 +80,8 @@ module.exports = function (config) {
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
-    browsers: ['CHROME', 'FIREFOX', 'EDGE17', 'EDGE18', 'SAFARI11', 'SAFARI12'],
+    browsers: ['CHROME', 'FIREFOX', 'EDGE', 'EDGE18', 'SAFARI12', 'SAFARI13'],
+    autoWatch: false,
     singleRun: true,
     captureTimeout: 180000,
     browserDisconnectTimeout: 180000,

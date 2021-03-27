@@ -56,6 +56,9 @@ describe('ngb-datepicker integration', () => {
 
       // reversed years: 1998 -> 9881
       getYearNumerals(year: number) { return `${year}`.split('').reverse().join(''); }
+
+      // alphabetic week short name
+      getWeekLabel() { return ALPHABET.substring(0, 2); }
     }
 
     let fixture: ComponentFixture<TestComponent>;
@@ -111,6 +114,46 @@ describe('ngb-datepicker integration', () => {
       const monthNames = Array.from(monthNameElements).map((o: HTMLElement) => o.innerText.trim());
       expect(monthNames).toEqual(['A 8102', 'B 8102']);
     });
+
+    it('should allow overriding week label', () => {
+      const weekLabelElement = (fixture.nativeElement as HTMLElement).querySelector('.ngb-dp-showweek') as HTMLElement;
+      const weekLabel = weekLabelElement.innerText.trim();
+      expect(weekLabel).toEqual(ALPHABET.substring(0, 2));
+    });
+  });
+
+  describe('i18n-month-label', () => {
+
+    @Injectable()
+    class CustomI18n extends NgbDatepickerI18nDefault {
+      getMonthLabel(date: NgbDateStruct): string { return `${date.month}-${date.year}`; }
+    }
+
+    let fixture: ComponentFixture<TestComponent>;
+
+    beforeEach(() => {
+      TestBed.overrideComponent(TestComponent, {
+        set: {
+          template: `
+            <ngb-datepicker [startDate]="{year: 2018, month: 1}"
+                            [minDate]="{year: 2017, month: 1, day: 1}"
+                            [maxDate]="{year: 2019, month: 12, day: 31}"
+                            [showWeekNumbers]="true"
+                            [displayMonths]="2"
+            ></ngb-datepicker>`,
+          providers: [{provide: NgbDatepickerI18n, useClass: CustomI18n}]
+        }
+      });
+
+      fixture = TestBed.createComponent(TestComponent);
+      fixture.detectChanges();
+    });
+
+    it('should allow overriding month labels', () => {
+      const monthNameElements = fixture.nativeElement.querySelectorAll('.ngb-dp-month-name');
+      const monthNames = Array.from(monthNameElements).map((o: HTMLElement) => o.innerText.trim());
+      expect(monthNames).toEqual(['1-2018', '2-2018']);
+    });
   });
 
   describe('keyboard service', () => {
@@ -139,7 +182,7 @@ describe('ngb-datepicker integration', () => {
     let fixture: ComponentFixture<TestComponent>;
     let calendar: NgbCalendar;
     let mv: NgbDatepickerMonth;
-    let startDate: NgbDateStruct = new NgbDate(2018, 1, 1);
+    let startDate: NgbDate = new NgbDate(2018, 1, 1);
 
     beforeEach(() => {
       TestBed.overrideComponent(TestComponent, {
@@ -175,7 +218,7 @@ describe('ngb-datepicker integration', () => {
   describe('ngb-datepicker-month', () => {
     let fixture: ComponentFixture<TestComponent>;
     let mv: NgbDatepickerMonth;
-    let startDate: NgbDateStruct = new NgbDate(2018, 1, 1);
+    let startDate: NgbDate = new NgbDate(2018, 1, 1);
     let ngbCalendar: NgbCalendar;
 
     beforeEach(() => {

@@ -229,7 +229,7 @@ describe('NgbInputDatepicker', () => {
          tick();
          expect(input.value).toBe('');
 
-         fixture.componentInstance.date = null;
+         fixture.componentInstance.date = <any>null;
          fixture.detectChanges();
          tick();
          expect(input.value).toBe('');
@@ -239,7 +239,7 @@ describe('NgbInputDatepicker', () => {
          tick();
          expect(input.value).toBe('');
 
-         fixture.componentInstance.date = undefined;
+         fixture.componentInstance.date = <any>undefined;
          fixture.detectChanges();
          tick();
          expect(input.value).toBe('');
@@ -249,17 +249,17 @@ describe('NgbInputDatepicker', () => {
          tick();
          expect(input.value).toBe('');
 
-         fixture.componentInstance.date = new NgbDate(2017, 2, null);
+         fixture.componentInstance.date = new NgbDate(2017, 2, <any>null);
          fixture.detectChanges();
          tick();
          expect(input.value).toBe('');
 
-         fixture.componentInstance.date = new NgbDate(2017, null, 5);
+         fixture.componentInstance.date = new NgbDate(2017, <any>null, 5);
          fixture.detectChanges();
          tick();
          expect(input.value).toBe('');
 
-         fixture.componentInstance.date = new NgbDate(null, 2, 5);
+         fixture.componentInstance.date = new NgbDate(<any>null, 2, 5);
          fixture.detectChanges();
          tick();
          expect(input.value).toBe('');
@@ -463,7 +463,7 @@ describe('NgbInputDatepicker', () => {
            expect(form.control.getError('ngbDate', ['dp']).invalid).toBe(5);
          }));
 
-      it('should return "requiredBefore" errors for dates before minimal date', fakeAsync(() => {
+      it('should return "minDate" errors for dates before minimal date', fakeAsync(() => {
            const fixture = createTestCmpt(`<form>
           <input ngbDatepicker [ngModel]="{year: 2017, month: 04, day: 04}" [minDate]="{year: 2017, month: 6, day: 4}" name="dp">
         </form>`);
@@ -472,10 +472,11 @@ describe('NgbInputDatepicker', () => {
            fixture.detectChanges();
            tick();
            expect(form.control.invalid).toBeTruthy();
-           expect(form.control.getError('ngbDate', ['dp']).requiredBefore).toEqual({year: 2017, month: 6, day: 4});
+           expect(form.control.getError('ngbDate', ['dp']).minDate)
+               .toEqual({minDate: {year: 2017, month: 6, day: 4}, actual: {year: 2017, month: 4, day: 4}});
          }));
 
-      it('should return "requiredAfter" errors for dates after maximal date', fakeAsync(() => {
+      it('should return "maxDate" errors for dates after maximal date', fakeAsync(() => {
            const fixture = createTestCmpt(`<form>
           <input ngbDatepicker [ngModel]="{year: 2017, month: 04, day: 04}" [maxDate]="{year: 2017, month: 2, day: 4}" name="dp">
         </form>`);
@@ -484,7 +485,8 @@ describe('NgbInputDatepicker', () => {
            fixture.detectChanges();
            tick();
            expect(form.control.invalid).toBeTruthy();
-           expect(form.control.getError('ngbDate', ['dp']).requiredAfter).toEqual({year: 2017, month: 2, day: 4});
+           expect(form.control.getError('ngbDate', ['dp']).maxDate)
+               .toEqual({maxDate: {year: 2017, month: 2, day: 4}, actual: {year: 2017, month: 4, day: 4}});
          }));
 
       it('should update validity status when model changes', fakeAsync(() => {
@@ -673,7 +675,6 @@ describe('NgbInputDatepicker', () => {
       fixture.componentRef.instance.minDate = {year: 2019, month: 11, day: 14};
       fixture.detectChanges();
       expect(dp.minDate).toEqual({year: 2019, month: 11, day: 14});
-
     });
 
     it('should dynamically propagate the "maxDate" option', () => {
@@ -690,7 +691,6 @@ describe('NgbInputDatepicker', () => {
       fixture.componentRef.instance.maxDate = {year: 2019, month: 12, day: 14};
       fixture.detectChanges();
       expect(dp.maxDate).toEqual({year: 2019, month: 12, day: 14});
-
     });
 
     it('should dynamically propagate the "maxDate" and "minDate" option', () => {
@@ -712,7 +712,6 @@ describe('NgbInputDatepicker', () => {
 
       expect(dp.minDate).toEqual({year: 2019, month: 10, day: 14});
       expect(dp.maxDate).toEqual({year: 2019, month: 12, day: 14});
-
     });
 
     it('should propagate the "outsideDays" option', () => {
@@ -746,6 +745,17 @@ describe('NgbInputDatepicker', () => {
 
       const dp = fixture.debugElement.query(By.css('ngb-datepicker')).injector.get(NgbDatepicker);
       expect(dp.showWeekdays).toBeTruthy();
+    });
+
+    it('should propagate the "weekdays" option', () => {
+      const fixture = createTestCmpt(`<input ngbDatepicker [weekdays]="false">`);
+      const dpInput = fixture.debugElement.query(By.directive(NgbInputDatepicker)).injector.get(NgbInputDatepicker);
+
+      dpInput.open();
+      fixture.detectChanges();
+
+      const dp = fixture.debugElement.query(By.css('ngb-datepicker')).injector.get(NgbDatepicker);
+      expect(dp.weekdays).toBeFalse();
     });
 
     it('should propagate the "showWeekNumbers" option', () => {
@@ -851,6 +861,31 @@ describe('NgbInputDatepicker', () => {
       expect(fixture.componentInstance.onDateSelect).toHaveBeenCalledWith(new NgbDate(2018, 3, 1));
       expect(fixture.componentInstance.onModelChange).toHaveBeenCalledWith({year: 2018, month: 3, day: 1});
     });
+
+    it('should add custom popup class via "popupClass" input', () => {
+      const fixture = createTestCmpt(`<input ngbDatepicker #d="ngbDatepicker" [datepickerClass]="popupClass">`);
+      fixture.detectChanges();
+      const dpInput = fixture.debugElement.query(By.directive(NgbInputDatepicker)).injector.get(NgbInputDatepicker);
+      dpInput.open();
+
+      // initial value
+      let element = document.querySelector('ngb-datepicker') as HTMLElement;
+      expect(element).not.toBeNull();
+      expect(element).toHaveCssClass('my-datepicker-popup');
+      expect(element).not.toHaveCssClass('my-another-datepicker-popup');
+
+      // empty value
+      fixture.componentInstance.popupClass = '';
+      fixture.detectChanges();
+      expect(element).not.toHaveCssClass('my-datepicker-popup');
+      expect(element).not.toHaveCssClass('my-another-datepicker-popup');
+
+      // another value
+      fixture.componentInstance.popupClass = 'my-another-datepicker-popup';
+      fixture.detectChanges();
+      expect(element).not.toHaveCssClass('my-datepicker-popup');
+      expect(element).toHaveCssClass('my-another-datepicker-popup');
+    });
   });
 
   describe('container', () => {
@@ -868,7 +903,7 @@ describe('NgbInputDatepicker', () => {
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('ngb-datepicker')).toBeNull();
-      expect(document.querySelector(selector).querySelector('ngb-datepicker')).not.toBeNull();
+      expect(document.querySelector(selector) !.querySelector('ngb-datepicker')).not.toBeNull();
     });
 
     it('should properly destroy datepicker window when the "container" option is used', () => {
@@ -885,14 +920,14 @@ describe('NgbInputDatepicker', () => {
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('ngb-datepicker')).toBeNull();
-      expect(document.querySelector(selector).querySelector('ngb-datepicker')).not.toBeNull();
+      expect(document.querySelector(selector) !.querySelector('ngb-datepicker')).not.toBeNull();
 
       // close date-picker
       buttons[1].click();  // close button
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('ngb-datepicker')).toBeNull();
-      expect(document.querySelector(selector).querySelector('ngb-datepicker')).toBeNull();
+      expect(document.querySelector(selector) !.querySelector('ngb-datepicker')).toBeNull();
     });
 
     it('should add .ngb-dp-body class when attached to body', () => {
@@ -1131,17 +1166,38 @@ describe('NgbInputDatepicker', () => {
       inputDebugEl.triggerEventHandler('input', {target: {value: '2018-01-03'}});
       expect(fixture.componentInstance.date).toEqual(new Date(2018, 0, 3));
     });
+
+    it('should dynamically propagate the "maxDate" and "minDate" option', () => {
+      const fixture = createTestCmpt(`<input ngbDatepicker [minDate]="minDate" [maxDate]="maxDate">`);
+      const dpInput = fixture.debugElement.query(By.directive(NgbInputDatepicker)).injector.get(NgbInputDatepicker);
+      fixture.componentRef.instance.minDate = {year: 2019, month: 11, day: 14};
+      fixture.componentRef.instance.maxDate = {year: 2019, month: 12, day: 31};
+
+      dpInput.open();
+      fixture.detectChanges();
+
+      const dp = fixture.debugElement.query(By.css('ngb-datepicker')).injector.get(NgbDatepicker);
+      expect(dp.minDate).toEqual({year: 2019, month: 11, day: 14});
+      expect(dp.maxDate).toEqual({year: 2019, month: 12, day: 31});
+
+      fixture.componentRef.instance.minDate = {year: 2019, month: 10, day: 14};
+      fixture.componentRef.instance.maxDate = {year: 2019, month: 12, day: 14};
+      fixture.detectChanges();
+
+      expect(dp.minDate).toEqual({year: 2019, month: 10, day: 14});
+      expect(dp.maxDate).toEqual({year: 2019, month: 12, day: 14});
+    });
   });
 });
 
 @Injectable()
 class NgbDateNativeAdapter extends NgbDateAdapter<Date> {
-  fromModel(date: Date): NgbDateStruct {
+  fromModel(date: Date): NgbDateStruct | null {
     return (date && date.getFullYear) ? {year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate()} :
                                         null;
   }
 
-  toModel(date: NgbDateStruct): Date { return date ? new Date(date.year, date.month - 1, date.day) : null; }
+  toModel(date: NgbDateStruct): Date | null { return date ? new Date(date.year, date.month - 1, date.day) : null; }
 }
 
 @Component({selector: 'test-native-cmp', template: ''})
@@ -1156,12 +1212,13 @@ class TestComponent {
   minDate: NgbDateStruct;
   maxDate: NgbDateStruct;
   isDisabled;
+  popupClass = 'my-datepicker-popup';
 
-  onNavigate() {}
+  onNavigate(params) {}
 
-  onDateSelect() {}
+  onDateSelect(date) {}
 
-  onModelChange() {}
+  onModelChange(value) {}
 
   onClose() {}
 

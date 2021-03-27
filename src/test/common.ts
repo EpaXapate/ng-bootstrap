@@ -17,8 +17,6 @@ export function createGenericTestComponent<T>(
 export type Browser = 'ie9' | 'ie10' | 'ie11' | 'ie' | 'edge' | 'chrome' | 'safari' | 'firefox';
 
 export function getBrowser(ua = window.navigator.userAgent) {
-  let browser = 'unknown';
-
   // IE < 11
   const msie = ua.indexOf('MSIE ');
   if (msie > 0) {
@@ -51,9 +49,7 @@ export function getBrowser(ua = window.navigator.userAgent) {
     return 'firefox';
   }
 
-  if (browser === 'unknown') {
-    throw new Error('Browser detection failed for: ' + ua);
-  }
+  throw new Error('Browser detection failed for: ' + ua);
 }
 
 export function isBrowser(browsers: Browser | Browser[], ua = window.navigator.userAgent) {
@@ -65,6 +61,14 @@ export function isBrowser(browsers: Browser | Browser[], ua = window.navigator.u
   } else {
     return browsersStr.indexOf(browser) > -1;
   }
+}
+
+export function isBrowserVisible(suiteName: string) {
+  if (document.hidden) {
+    console.warn(`${suiteName} tests were skipped because browser tab running these tests is hidden or inactive`);
+    return false;
+  }
+  return true;
 }
 
 export function createKeyEvent(key: Key, options: {type: 'keyup' | 'keydown'} = {

@@ -1,4 +1,5 @@
 import {Injectable, TemplateRef} from '@angular/core';
+import {TranslationWidth} from '@angular/common';
 import {DayTemplateContext} from './datepicker-day-template-context';
 import {NgbDateStruct} from './ngb-date-struct';
 
@@ -11,11 +12,11 @@ import {NgbDateStruct} from './ngb-date-struct';
 @Injectable({providedIn: 'root'})
 export class NgbDatepickerConfig {
   dayTemplate: TemplateRef<DayTemplateContext>;
-  dayTemplateData: (date: NgbDateStruct, current: {year: number, month: number}) => any;
+  dayTemplateData: (date: NgbDateStruct, current?: {year: number, month: number}) => any;
   footerTemplate: TemplateRef<any>;
   displayMonths = 1;
   firstDayOfWeek = 1;
-  markDisabled: (date: NgbDateStruct, current: {year: number, month: number}) => boolean;
+  markDisabled: (date: NgbDateStruct, current?: {year: number, month: number}) => boolean;
   minDate: NgbDateStruct;
   maxDate: NgbDateStruct;
   navigation: 'select' | 'arrows' | 'none' = 'select';
@@ -23,4 +24,5 @@ export class NgbDatepickerConfig {
   showWeekdays = true;
   showWeekNumbers = false;
   startDate: {year: number, month: number};
+  weekdays: TranslationWidth | boolean = TranslationWidth.Short;
 }

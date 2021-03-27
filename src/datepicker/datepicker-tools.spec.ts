@@ -1,17 +1,18 @@
+import {TranslationWidth} from '@angular/common';
 import {
   buildMonth,
   buildMonths,
   checkDateInRange,
   dateComparator,
   generateSelectBoxMonths,
+  generateSelectBoxYears,
   getFirstViewDate,
   isChangedMonth,
-  isDateSelectable,
-  generateSelectBoxYears
+  isDateSelectable
 } from './datepicker-tools';
 import {NgbDate} from './ngb-date';
 import {NgbCalendarGregorian} from './ngb-calendar';
-import {DatepickerViewModel, NgbMarkDisabled, MonthViewModel} from './datepicker-view-model';
+import {DatepickerViewModel, MonthViewModel, NgbMarkDisabled} from './datepicker-view-model';
 import {NgbDatepickerI18nDefault} from './datepicker-i18n';
 
 describe(`datepicker-tools`, () => {
@@ -64,7 +65,7 @@ describe(`datepicker-tools`, () => {
     });
 
     it(`should bypass invalid date values`, () => {
-      expect(checkDateInRange(undefined, undefined, undefined)).toBeUndefined();
+      expect(checkDateInRange(undefined, undefined, undefined)).toBeNull();
       expect(checkDateInRange(null, undefined, undefined)).toBeNull();
       expect(checkDateInRange(new NgbDate(-2, 0, 0), undefined, undefined)).toEqual(new NgbDate(-2, 0, 0));
     });
@@ -112,14 +113,16 @@ describe(`datepicker-tools`, () => {
     months.forEach(refMonth => {
       it(`should build month (${refMonth.date.year} - ${refMonth.date.month}) correctly`, () => {
 
-        let month = buildMonth(calendar, refMonth.date, { firstDayOfWeek: 1 } as DatepickerViewModel, i18n);
+        let month = buildMonth(calendar, refMonth.date, {
+          firstDayOfWeek: 1, weekdayWidth: TranslationWidth.Short, weekdaysVisible: true
+        } as DatepickerViewModel, i18n);
 
         expect(month).toBeTruthy();
         expect(month.year).toEqual(refMonth.date.year);
         expect(month.number).toEqual(refMonth.date.month);
         expect(month.firstDate).toEqual(new NgbDate(refMonth.date.year, refMonth.date.month, 1));
         expect(month.lastDate).toEqual(new NgbDate(refMonth.date.year, refMonth.date.month, refMonth.lastDay));
-        expect(month.weekdays).toEqual([1, 2, 3, 4, 5, 6, 7]);
+        expect(month.weekdays).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
         expect(month.weeks.length).toBe(6);
 
         // First week, first day
@@ -199,13 +202,17 @@ describe(`datepicker-tools`, () => {
 
     it(`should rotate days of the week`, () => {
       // SUN = 7
-      let month = buildMonth(calendar, new NgbDate(2017, 5, 5), { firstDayOfWeek: 7 } as DatepickerViewModel, i18n);
-      expect(month.weekdays).toEqual([7, 1, 2, 3, 4, 5, 6]);
+      let month = buildMonth(calendar, new NgbDate(2017, 5, 5), {
+        firstDayOfWeek: 7, weekdaysVisible: true, weekdayWidth: TranslationWidth.Short
+      } as DatepickerViewModel, i18n);
+      expect(month.weekdays).toEqual(['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']);
       expect(month.weeks[0].days[0].date).toEqual(new NgbDate(2017, 4, 30));
 
       // WED = 3
-      month = buildMonth(calendar, new NgbDate(2017, 5, 5), { firstDayOfWeek: 3 } as DatepickerViewModel, i18n);
-      expect(month.weekdays).toEqual([3, 4, 5, 6, 7, 1, 2]);
+      month = buildMonth(calendar, new NgbDate(2017, 5, 5), {
+        firstDayOfWeek: 3, weekdaysVisible: true, weekdayWidth: TranslationWidth.Short
+      } as DatepickerViewModel, i18n);
+      expect(month.weekdays).toEqual(['We', 'Th', 'Fr', 'Sa', 'Su', 'Mo', 'Tu']);
       expect(month.weeks[0].days[0].date).toEqual(new NgbDate(2017, 4, 26));
     });
   });
@@ -213,7 +220,7 @@ describe(`datepicker-tools`, () => {
   describe(`buildMonths()`, () => {
 
     it(`should generate 'displayMonths' number of months`, () => {
-      let state = { displayMonths: 1, firstDayOfWeek: 1, months: [] } as DatepickerViewModel;
+      let state = { displayMonths: 1, firstDayOfWeek: 1, months: [] as MonthViewModel[] } as DatepickerViewModel;
       let months = buildMonths(calendar, new NgbDate(2017, 5, 5), state, i18n, false);
       expect(months.length).toBe(1);
 
@@ -283,11 +290,11 @@ describe(`datepicker-tools`, () => {
     beforeEach(function() { jasmine.addMatchers(customMatchers); });
 
     it(`should reuse the same data structure (force = false)`, () => {
-      let state = { displayMonths: 1, firstDayOfWeek: 1, months: [] } as DatepickerViewModel;
+      let state = { displayMonths: 1, firstDayOfWeek: 1, months: [] as MonthViewModel[] } as DatepickerViewModel;
       let months = buildMonths(calendar, new NgbDate(2017, 5, 5), state, i18n, false);
       expect(months).toBe(state.months);
       expect(months.length).toBe(1);
-      let monthsStructure = storeMonthsDataStructure(months);
+      let monthsStructure = storeMonthsDataStructure(months) !;
 
       months = buildMonths(calendar, new NgbDate(2018, 5, 5), state, i18n, false);
       expect(months).toBe(state.months);
@@ -306,7 +313,7 @@ describe(`datepicker-tools`, () => {
       expect(months).toBe(state.months);
       expect(months.length).toBe(2);
       // the structures should be swapped:
-      monthsStructure.push(monthsStructure.shift());
+      monthsStructure.push(monthsStructure.shift() !);
       expect(storeMonthsDataStructure(months))['toHaveTheSameMonthDataStructureAs'](monthsStructure);
 
       // previous month
@@ -314,7 +321,7 @@ describe(`datepicker-tools`, () => {
       expect(months).toBe(state.months);
       expect(months.length).toBe(2);
       // the structures should be swapped (again):
-      monthsStructure.push(monthsStructure.shift());
+      monthsStructure.push(monthsStructure.shift() !);
       expect(storeMonthsDataStructure(months))['toHaveTheSameMonthDataStructureAs'](monthsStructure);
 
       state.displayMonths = 5;
@@ -354,7 +361,7 @@ describe(`datepicker-tools`, () => {
     });
 
     it(`should reuse the same data structure (force = true)`, () => {
-      let state = { displayMonths: 1, firstDayOfWeek: 1, months: [] } as DatepickerViewModel;
+      let state = { displayMonths: 1, firstDayOfWeek: 1, months: [] as MonthViewModel[] } as DatepickerViewModel;
       let months = buildMonths(calendar, new NgbDate(2017, 5, 5), state, i18n, true);
       expect(months).toBe(state.months);
       expect(months.length).toBe(1);

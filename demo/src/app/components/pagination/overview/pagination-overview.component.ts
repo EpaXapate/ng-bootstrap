@@ -15,7 +15,7 @@ export class NgbdPaginationOverviewComponent {
     lang: 'html',
     code: `
       <table>
-        <tr *ngFor="let item of items | slice: (page-1) * pageSize : (page-1) * pageSize + pageSize">
+        <tr *ngFor="let item of items | slice: (page-1) * pageSize : page * pageSize">
           <!-- content here -->
         </tr>
       </table>
@@ -58,6 +58,17 @@ export class NgbdPaginationOverviewComponent {
         <ng-template ngbPaginationNext>Next</ng-template>
         <ng-template ngbPaginationEllipsis>...</ng-template>
         <ng-template ngbPaginationNumber let-page>{{ page }}</ng-template>
+      </ngb-pagination>
+    `,
+  });
+
+  CUSTOM_TPL_PAGES = Snippet({
+    lang: 'html',
+    code: `
+      <ngb-pagination>
+        <ng-template ngbPaginationPages let-page let-pages="pages">
+            <!-- render the "pages" collection here -->
+        </ng-template>
       </ngb-pagination>
     `,
   });

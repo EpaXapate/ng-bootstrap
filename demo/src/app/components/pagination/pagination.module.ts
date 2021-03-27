@@ -40,7 +40,7 @@ const DEMOS = {
     markup: require('!!raw-loader!./demos/advanced/pagination-advanced.html').default
   },
   customization: {
-    title: 'Custom links',
+    title: 'Custom links and pages',
     type: NgbdPaginationCustomization,
     code: require('!!raw-loader!./demos/customization/pagination-customization').default,
     markup: require('!!raw-loader!./demos/customization/pagination-customization.html').default
@@ -76,7 +76,9 @@ export const ROUTES = [
   {
     path: '',
     component: ComponentWrapper,
-    data: { OVERVIEW },
+    data: {
+      bootstrap: 'https://getbootstrap.com/docs/%version%/components/pagination/'
+    },
     children: [
       { path: 'overview', component: NgbdPaginationOverviewComponent },
       { path: 'examples', component: NgbdExamplesPage },

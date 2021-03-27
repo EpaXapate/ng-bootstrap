@@ -4,7 +4,7 @@ import {createGenericTestComponent} from '../test/common';
 import {Component, Injectable} from '@angular/core';
 
 import {NgbDatepickerModule} from './datepicker.module';
-import {NgbDatepicker, NgbDatepickerContent, NGB_DATEPICKER_VALUE_ACCESSOR} from './datepicker';
+import {NgbDatepicker, NgbDatepickerContent} from './datepicker';
 import {NgbDatepickerKeyboardService} from './datepicker-keyboard-service';
 import {NgbDatepickerService} from './datepicker-service';
 import {NgbDatepickerMonth} from './datepicker-month';
@@ -19,15 +19,11 @@ const createTestComponent = () => createGenericTestComponent(
                   [showWeekdays]="showWeekdays"
                   [showWeekNumbers]="showWeekNumbers"
                   [outsideDays]="outsideDays"
-                  (select)="onClick($event)">
+                  (dateSelect)="onClick($event)">
     <ng-template #dt let-date="date">{{ date.day }}</ng-template>
   </ngb-datepicker>
 `,
     TestComponent) as ComponentFixture<TestComponent>;
-
-function getWeekdays(element: HTMLElement): HTMLElement[] {
-  return <HTMLElement[]>Array.from(element.querySelectorAll('.ngb-dp-weekday'));
-}
 
 function getWeekNumbers(element: HTMLElement): HTMLElement[] {
   return <HTMLElement[]>Array.from(element.querySelectorAll('.ngb-dp-week-number'));
@@ -37,9 +33,8 @@ function getDates(element: HTMLElement): HTMLElement[] {
   return <HTMLElement[]>Array.from(element.querySelectorAll('.ngb-dp-day'));
 }
 
-function expectWeekdays(element: HTMLElement, weekdays: string[]) {
-  const result = getWeekdays(element).map(td => td.innerText.trim());
-  expect(result).toEqual(weekdays);
+function getWeekLabel(element: HTMLElement): HTMLElement | null {
+  return element.querySelector('.ngb-dp-showweek');
 }
 
 function expectWeekNumbers(element: HTMLElement, weeknumbers: string[]) {
@@ -52,6 +47,12 @@ function expectDates(element: HTMLElement, dates: string[]) {
   expect(result).toEqual(dates);
 }
 
+function expectWeekLabel(element: HTMLElement, weekLabel: string) {
+  const weekLabelElement = getWeekLabel(element);
+  const result = weekLabelElement ? weekLabelElement.innerText.trim() : '';
+  expect(result).toEqual(weekLabel);
+}
+
 @Injectable()
 class MockDatepickerService extends NgbDatepickerService {
   getMonth(struct: NgbDateStruct) {
@@ -60,7 +61,7 @@ class MockDatepickerService extends NgbDatepickerService {
       lastDate: new NgbDate(2016, 8, 31),
       year: 2016,
       number: 8,
-      weekdays: [1, 2],
+      weekdays: ['Mo', 'Tu'],
       weeks: [
         // month: 7, 8
         {
@@ -230,11 +231,8 @@ describe('ngb-datepicker-month', () => {
         NgbDatepickerModule,
         {set: {exports: [NgbDatepicker, NgbDatepickerContent, NgbDatepickerMonth, NgbDatepickerDayView]}});
     TestBed.overrideComponent(NgbDatepicker, {
-      set: {
-        providers: [
-          NGB_DATEPICKER_VALUE_ACCESSOR, {provide: NgbDatepickerService, useClass: MockDatepickerService},
-          NgbDatepickerKeyboardService
-        ]
+      add: {
+        providers: [{provide: NgbDatepickerService, useClass: MockDatepickerService}, NgbDatepickerKeyboardService]
       }
     });
     TestBed.configureTestingModule({
@@ -244,26 +242,17 @@ describe('ngb-datepicker-month', () => {
     });
   });
 
-  it('should show/hide weekdays', () => {
-    const fixture = createTestComponent();
-    fixture.componentInstance.showWeekNumbers = false;
-    fixture.detectChanges();
-
-    expectWeekdays(fixture.nativeElement, ['Mo', 'Tu']);
-
-    fixture.componentInstance.showWeekdays = false;
-    fixture.detectChanges();
-    expectWeekdays(fixture.nativeElement, []);
-  });
-
   it('should show/hide week numbers', () => {
     const fixture = createTestComponent();
 
     expectWeekNumbers(fixture.nativeElement, ['1', '2', '3']);
+    expectWeekLabel(fixture.nativeElement, '');
 
     fixture.componentInstance.showWeekNumbers = false;
     fixture.detectChanges();
+
     expectWeekNumbers(fixture.nativeElement, []);
+    expectWeekLabel(fixture.nativeElement, '');
   });
 
   it('should use custom template to display dates', () => {
@@ -399,5 +388,5 @@ class TestComponent {
   showWeekNumbers = true;
   outsideDays = 'visible';
 
-  onClick = () => {};
+  onClick = (event) => {};
 }

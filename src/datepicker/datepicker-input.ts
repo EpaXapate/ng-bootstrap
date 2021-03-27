@@ -17,8 +17,15 @@ import {
   TemplateRef,
   ViewContainerRef
 } from '@angular/core';
-import {DOCUMENT} from '@angular/common';
-import {AbstractControl, ControlValueAccessor, NG_VALIDATORS, NG_VALUE_ACCESSOR, Validator} from '@angular/forms';
+import {DOCUMENT, TranslationWidth} from '@angular/common';
+import {
+  AbstractControl,
+  ControlValueAccessor,
+  NG_VALIDATORS,
+  NG_VALUE_ACCESSOR,
+  ValidationErrors,
+  Validator
+} from '@angular/forms';
 
 import {ngbAutoClose} from '../util/autoclose';
 import {ngbFocusTrap} from '../util/focus-trap';
@@ -34,18 +41,6 @@ import {NgbDateStruct} from './ngb-date-struct';
 import {NgbInputDatepickerConfig} from './datepicker-input-config';
 import {NgbDatepickerConfig} from './datepicker-config';
 import {isString} from '../util/util';
-
-const NGB_DATEPICKER_VALUE_ACCESSOR = {
-  provide: NG_VALUE_ACCESSOR,
-  useExisting: forwardRef(() => NgbInputDatepicker),
-  multi: true
-};
-
-const NGB_DATEPICKER_VALIDATOR = {
-  provide: NG_VALIDATORS,
-  useExisting: forwardRef(() => NgbInputDatepicker),
-  multi: true
-};
 
 /**
  * A directive that allows to stick a datepicker popup to an input field.
@@ -63,17 +58,25 @@ const NGB_DATEPICKER_VALIDATOR = {
     '[disabled]': 'disabled'
   },
   providers: [
-    NGB_DATEPICKER_VALUE_ACCESSOR, NGB_DATEPICKER_VALIDATOR,
+    {provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => NgbInputDatepicker), multi: true},
+    {provide: NG_VALIDATORS, useExisting: forwardRef(() => NgbInputDatepicker), multi: true},
     {provide: NgbDatepickerConfig, useExisting: NgbInputDatepickerConfig}
   ],
 })
 export class NgbInputDatepicker implements OnChanges,
     OnDestroy, ControlValueAccessor, Validator {
-  private _cRef: ComponentRef<NgbDatepicker> = null;
+  static ngAcceptInputType_autoClose: boolean | string;
+  static ngAcceptInputType_disabled: boolean | '';
+  static ngAcceptInputType_navigation: string;
+  static ngAcceptInputType_outsideDays: string;
+  static ngAcceptInputType_weekdays: boolean | number;
+
+  private _cRef: ComponentRef<NgbDatepicker>| null = null;
   private _disabled = false;
-  private _elWithFocus = null;
-  private _model: NgbDate;
+  private _elWithFocus: HTMLElement | null = null;
+  private _model: NgbDate | null = null;
   private _inputValue: string;
+  private _showWeekdays: boolean;
   private _zoneSubscription: any;
 
   /**
@@ -87,6 +90,13 @@ export class NgbInputDatepicker implements OnChanges,
    * @since 3.0.0
    */
   @Input() autoClose: boolean | 'inside' | 'outside';
+
+  /**
+   * An optional class applied to the datepicker popup element.
+   *
+   * @since 9.1.0
+   */
+  @Input() datepickerClass: string;
 
   /**
    * The reference to a custom template for the day.
@@ -105,7 +115,7 @@ export class NgbInputDatepicker implements OnChanges,
    *
    * @since 3.3.0
    */
-  @Input() dayTemplateData: (date: NgbDate, current: {year: number, month: number}) => any;
+  @Input() dayTemplateData: (date: NgbDate, current?: {year: number, month: number}) => any;
 
   /**
    * The number of months to display.
@@ -133,7 +143,7 @@ export class NgbInputDatepicker implements OnChanges,
    *
    * `current` is the month that is currently displayed by the datepicker.
    */
-  @Input() markDisabled: (date: NgbDate, current: {year: number, month: number}) => boolean;
+  @Input() markDisabled: (date: NgbDate, current?: {year: number, month: number}) => boolean;
 
   /**
    * The earliest date that can be displayed or selected. Also used for form validation.
@@ -196,8 +206,16 @@ export class NgbInputDatepicker implements OnChanges,
 
   /**
    * If `true`, weekdays will be displayed.
+   *
+   * @deprecated 9.1.0, please use 'weekdays' instead
    */
-  @Input() showWeekdays: boolean;
+  @Input()
+  set showWeekdays(weekdays: boolean) {
+    this.weekdays = weekdays;
+    this._showWeekdays = weekdays;
+  }
+
+  get showWeekdays(): boolean { return this._showWeekdays; }
 
   /**
    * If `true`, week numbers will be displayed.
@@ -231,6 +249,17 @@ export class NgbInputDatepicker implements OnChanges,
   @Input() positionTarget: string | HTMLElement;
 
   /**
+   * The way weekdays should be displayed.
+   *
+   * * `true` - weekdays are displayed using default width
+   * * `false` - weekdays are not displayed
+   * * `TranslationWidth` - weekdays are displayed using specified width
+   *
+   * @since 9.1.0
+   */
+  @Input() weekdays: TranslationWidth | boolean;
+
+  /**
    * An event emitted when user selects a date using keyboard or mouse.
    *
    * The payload of the event is currently selected `NgbDate`.
@@ -261,7 +290,7 @@ export class NgbInputDatepicker implements OnChanges,
     this._disabled = value === '' || (value && value !== 'false');
 
     if (this.isOpen()) {
-      this._cRef.instance.setDisabledState(this._disabled);
+      this._cRef !.instance.setDisabledState(this._disabled);
     }
   }
 
@@ -288,26 +317,26 @@ export class NgbInputDatepicker implements OnChanges,
 
   setDisabledState(isDisabled: boolean): void { this.disabled = isDisabled; }
 
-  validate(c: AbstractControl): {[key: string]: any} {
-    const value = c.value;
+  validate(c: AbstractControl): ValidationErrors | null {
+    const {value} = c;
 
-    if (value === null || value === undefined) {
-      return null;
+    if (value != null) {
+      const ngbDate = this._fromDateStruct(this._dateAdapter.fromModel(value));
+
+      if (!ngbDate) {
+        return {'ngbDate': {invalid: value}};
+      }
+
+      if (this.minDate && ngbDate.before(NgbDate.from(this.minDate))) {
+        return {'ngbDate': {minDate: {minDate: this.minDate, actual: value}}};
+      }
+
+      if (this.maxDate && ngbDate.after(NgbDate.from(this.maxDate))) {
+        return {'ngbDate': {maxDate: {maxDate: this.maxDate, actual: value}}};
+      }
     }
 
-    const ngbDate = this._fromDateStruct(this._dateAdapter.fromModel(value));
-
-    if (!this._calendar.isValid(ngbDate)) {
-      return {'ngbDate': {invalid: c.value}};
-    }
-
-    if (this.minDate && ngbDate.before(NgbDate.from(this.minDate))) {
-      return {'ngbDate': {requiredBefore: this.minDate}};
-    }
-
-    if (this.maxDate && ngbDate.after(NgbDate.from(this.maxDate))) {
-      return {'ngbDate': {requiredAfter: this.maxDate}};
-    }
+    return null;
   }
 
   writeValue(value) {
@@ -359,7 +388,7 @@ export class NgbInputDatepicker implements OnChanges,
       this._cRef.instance.setDisabledState(this.disabled);
 
       if (this.container === 'body') {
-        window.document.querySelector(this.container).appendChild(this._cRef.location.nativeElement);
+        this._document.querySelector(this.container).appendChild(this._cRef.location.nativeElement);
       }
 
       // focus handling
@@ -378,17 +407,17 @@ export class NgbInputDatepicker implements OnChanges,
    */
   close() {
     if (this.isOpen()) {
-      this._vcRef.remove(this._vcRef.indexOf(this._cRef.hostView));
+      this._vcRef.remove(this._vcRef.indexOf(this._cRef !.hostView));
       this._cRef = null;
       this.closed.emit();
       this._changeDetector.markForCheck();
 
       // restore focus
-      let elementToFocus = this._elWithFocus;
+      let elementToFocus: HTMLElement | null = this._elWithFocus;
       if (isString(this.restoreFocus)) {
         elementToFocus = this._document.querySelector(this.restoreFocus);
       } else if (this.restoreFocus !== undefined) {
-        elementToFocus = this.restoreFocus;
+        elementToFocus = this.restoreFocus as HTMLElement;
       }
 
       // in IE document.activeElement can contain an object without 'focus()' sometimes
@@ -421,7 +450,7 @@ export class NgbInputDatepicker implements OnChanges,
    */
   navigateTo(date?: {year: number, month: number, day?: number}) {
     if (this.isOpen()) {
-      this._cRef.instance.navigateTo(date);
+      this._cRef !.instance.navigateTo(date);
     }
   }
 
@@ -435,13 +464,18 @@ export class NgbInputDatepicker implements OnChanges,
 
       if (this.isOpen()) {
         if (changes['minDate']) {
-          this._cRef.instance.minDate = this._dateAdapter.toModel(changes.minDate.currentValue);
+          this._cRef !.instance.minDate = this.minDate;
         }
         if (changes['maxDate']) {
-          this._cRef.instance.maxDate = this._dateAdapter.toModel(changes.maxDate.currentValue);
+          this._cRef !.instance.maxDate = this.maxDate;
         }
-        this._cRef.instance.ngOnChanges(changes);
+        this._cRef !.instance.ngOnChanges(changes);
       }
+    }
+
+    if (changes['datepickerClass']) {
+      const {currentValue, previousValue} = changes['datepickerClass'];
+      this._applyPopupClass(currentValue, previousValue);
     }
   }
 
@@ -452,13 +486,25 @@ export class NgbInputDatepicker implements OnChanges,
 
   private _applyDatepickerInputs(datepickerInstance: NgbDatepicker): void {
     ['dayTemplate', 'dayTemplateData', 'displayMonths', 'firstDayOfWeek', 'footerTemplate', 'markDisabled', 'minDate',
-     'maxDate', 'navigation', 'outsideDays', 'showNavigation', 'showWeekdays', 'showWeekNumbers']
+     'maxDate', 'navigation', 'outsideDays', 'showNavigation', 'showWeekNumbers', 'weekdays']
         .forEach((optionName: string) => {
           if (this[optionName] !== undefined) {
             datepickerInstance[optionName] = this[optionName];
           }
         });
     datepickerInstance.startDate = this.startDate || this._model;
+  }
+
+  private _applyPopupClass(newClass: string, oldClass?: string) {
+    const popupEl = this._cRef ?.location.nativeElement;
+    if (popupEl) {
+      if (newClass) {
+        this._renderer.addClass(popupEl, newClass);
+      }
+      if (oldClass) {
+        this._renderer.removeClass(popupEl, oldClass);
+      }
+    }
   }
 
   private _applyPopupStyling(nativeElement: any) {
@@ -468,6 +514,8 @@ export class NgbInputDatepicker implements OnChanges,
     if (this.container === 'body') {
       this._renderer.addClass(nativeElement, 'ngb-dp-body');
     }
+
+    this._applyPopupClass(this.datepickerClass);
   }
 
   private _subscribeForDatepickerOutputs(datepickerInstance: NgbDatepicker) {
@@ -480,17 +528,17 @@ export class NgbInputDatepicker implements OnChanges,
     });
   }
 
-  private _writeModelValue(model: NgbDate) {
+  private _writeModelValue(model: NgbDate | null) {
     const value = this._parserFormatter.format(model);
     this._inputValue = value;
     this._renderer.setProperty(this._elRef.nativeElement, 'value', value);
     if (this.isOpen()) {
-      this._cRef.instance.writeValue(this._dateAdapter.toModel(model));
+      this._cRef !.instance.writeValue(this._dateAdapter.toModel(model));
       this._onTouched();
     }
   }
 
-  private _fromDateStruct(date: NgbDateStruct): NgbDate {
+  private _fromDateStruct(date: NgbDateStruct | null): NgbDate | null {
     const ngbDate = date ? new NgbDate(date.year, date.month, date.day) : null;
     return this._calendar.isValid(ngbDate) ? ngbDate : null;
   }

@@ -1,15 +1,30 @@
 import {Injectable, Injector} from '@angular/core';
+import {NgbConfig} from '../ngb-config';
 
 /**
  * Options available when opening new modal windows with `NgbModal.open()` method.
  */
 export interface NgbModalOptions {
   /**
+   * If `true`, modal opening and closing will be animated.
+   *
+   * @since 8.0.0
+   */
+  animation?: boolean;
+
+  /**
    * `aria-labelledby` attribute value to set on the modal window.
    *
    * @since 2.2.0
    */
   ariaLabelledBy?: string;
+
+  /**
+   * `aria-describedby` attribute value to set on the modal window.
+   *
+   * @since 6.1.0
+   */
+  ariaDescribedBy?: string;
 
   /**
    * If `true`, the backdrop element will be created for a given modal.
@@ -79,6 +94,13 @@ export interface NgbModalOptions {
   windowClass?: string;
 
   /**
+   * A custom class to append to the modal dialog.
+   *
+   * @since 9.1.0
+   */
+  modalDialogClass?: string;
+
+  /**
    * A custom class to append to the modal backdrop.
    *
    * @since 1.1.0
@@ -97,6 +119,7 @@ export interface NgbModalOptions {
 @Injectable({providedIn: 'root'})
 export class NgbModalConfig implements Required<NgbModalOptions> {
   ariaLabelledBy: string;
+  ariaDescribedBy: string;
   backdrop: boolean | 'static' = true;
   beforeDismiss: () => boolean | Promise<boolean>;
   centered: boolean;
@@ -106,5 +129,13 @@ export class NgbModalConfig implements Required<NgbModalOptions> {
   scrollable: boolean;
   size: 'sm' | 'lg' | 'xl' | string;
   windowClass: string;
+  modalDialogClass: string;
   backdropClass: string;
+
+  private _animation: boolean;
+
+  constructor(private _ngbConfig: NgbConfig) {}
+
+  get animation(): boolean { return (this._animation === undefined) ? this._ngbConfig.animation : this._animation; }
+  set animation(animation: boolean) { this._animation = animation; }
 }

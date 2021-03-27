@@ -9,7 +9,7 @@
       "projectType": "library",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-ng-packagr:build",
+          "builder": "@angular-devkit/build-angular:ng-packagr",
           "options": {
             "tsConfig": "src/tsconfig.json",
             "project": "src/ng-package.json"
@@ -23,6 +23,12 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
+            "fileReplacements": [
+              {
+                "src": "src/environment.ts",
+                "replaceWith": "src/environment.test.ts"
+              }
+            ],
             "main": "src/test.ts",
             "tsConfig": "src/tsconfig.spec.json",
             "karmaConfig": "src/karma.conf.js",
@@ -38,14 +44,16 @@
             "saucelabs": {
               "sourceMap": false,
               "progress": false,
+              "watch": false,
               "karmaConfig": "src/karma.sauce.conf.js"
             },
             "saucelabs-ie": {
               "sourceMap": false,
               "progress": false,
+              "watch": false,
               "tsConfig": "src/tsconfig-ie.spec.json",
               "karmaConfig": "src/karma.sauce.conf.js",
-              "browsers": "IE10,IE11"
+              "browsers": "IE11"
             }
           }
         },
@@ -109,7 +117,6 @@
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
-              "extractCss": true,
               "namedChunks": false,
               "aot": true,
               "extractLicenses": true,
@@ -144,21 +151,10 @@
             },
             "ie": {
               "browserTarget": "demo:build:ie"
-            }
-          }
-        },
-        "e2e": {
-          "builder": "@angular-devkit/build-angular:protractor",
-          "options": {
-            "protractorConfig": "demo/protractor.conf.js",
-            "devServerTarget": "demo:serve"
-          },
-          "configurations": {
-            "production": {
-              "devServerTarget": "demo:serve:production"
             },
-            "noserve": {
-              "devServerTarget": ""
+            "playwright": {
+              "liveReload": false,
+              "watch": false
             }
           }
         },
@@ -199,7 +195,8 @@
               "node_modules/bootstrap/dist/css/bootstrap.css",
               "e2e-app/src/style/app.scss"
             ],
-            "scripts": []
+            "scripts": [],
+            "progress": false
           },
           "configurations": {
             "production": {
@@ -210,9 +207,7 @@
                 }
               ],
               "optimization": true,
-              "outputHashing": "all",
-              "sourceMap": false,
-              "extractCss": true,
+              "sourceMap": true,
               "namedChunks": false,
               "aot": true,
               "extractLicenses": true,
@@ -225,28 +220,16 @@
           "builder": "ngx-build-plus:dev-server",
           "options": {
             "browserTarget": "e2e-app:build",
-            "progress": false,
             "extraWebpackConfig": "e2e-app/coverage.webpack.js"
           },
           "configurations": {
             "production": {
-              "browserTarget": "e2e-app:build:production",
-              "progress": false
-            }
-          }
-        },
-        "e2e": {
-          "builder": "@angular-devkit/build-angular:protractor",
-          "options": {
-            "protractorConfig": "e2e-app/protractor.conf.js",
-            "devServerTarget": "e2e-app:serve"
-          },
-          "configurations": {
-            "production": {
-              "devServerTarget": "e2e-app:serve:production"
+              "browserTarget": "e2e-app:build:production"
             },
-            "noserve": {
-              "devServerTarget": ""
+            "playwright": {
+              "browserTarget": "e2e-app:build:production",
+              "liveReload": false,
+              "watch": false
             }
           }
         },
@@ -303,7 +286,6 @@
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
-              "extractCss": true,
               "namedChunks": false,
               "aot": true,
               "extractLicenses": true,
@@ -322,13 +304,6 @@
             "production": {
               "browserTarget": "ssr-app:build:production"
             }
-          }
-        },
-        "e2e": {
-          "builder": "@angular-devkit/build-angular:protractor",
-          "options": {
-            "protractorConfig": "ssr-app/protractor.conf.js",
-            "devServerTarget": ""
           }
         },
         "lint": {
@@ -360,6 +335,62 @@
                   "with": "ssr-app/src/environments/environment.prod.ts"
                 }
               ]
+            }
+          }
+        }
+      }
+    },
+    "test-app": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "test-app",
+      "sourceRoot": "test-app/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "test-app/dist",
+            "index": "test-app/src/index.html",
+            "main": "test-app/src/main.ts",
+            "polyfills": "test-app/src/polyfills.ts",
+            "tsConfig": "test-app/tsconfig.json",
+            "aot": true,
+            "assets": [
+              "test-app/src/favicon.ico"
+            ],
+            "styles": [
+              "node_modules/bootstrap/dist/css/bootstrap.css",
+              "test-app/src/styles.css"
+            ],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "fileReplacements": [
+                {
+                  "replace": "test-app/src/environments/environment.ts",
+                  "with": "test-app/src/environments/environment.prod.ts"
+                }
+              ],
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "namedChunks": false,
+              "extractLicenses": true,
+              "vendorChunk": false,
+              "buildOptimizer": true
+            }
+          }
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "browserTarget": "test-app:build"
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "test-app:build:production"
             }
           }
         }

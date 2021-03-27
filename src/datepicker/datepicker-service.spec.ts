@@ -5,6 +5,7 @@ import {NgbDate} from './ngb-date';
 import {Subscription} from 'rxjs';
 import {DatepickerViewModel} from './datepicker-view-model';
 import {NgbDatepickerI18n, NgbDatepickerI18nDefault} from './datepicker-i18n';
+import {TranslationWidth} from '@angular/common';
 
 describe('ngb-datepicker-service', () => {
 
@@ -33,8 +34,8 @@ describe('ngb-datepicker-service', () => {
     calendar = TestBed.inject(NgbCalendar);
     service = TestBed.inject(NgbDatepickerService);
     subscriptions = [];
-    model = undefined;
-    selectDate = null;
+    model = <any>undefined;
+    selectDate = <any>null;
     focusMove = (focusDate: NgbDate, period?: NgbPeriod, number?: number) =>
         service.focus(calendar.getNext(focusDate, period, number));
 
@@ -86,7 +87,7 @@ describe('ngb-datepicker-service', () => {
       expect(model.minDate).toBeNull();
 
       // invalid -> ignore
-      service.set({minDate: new NgbDate(-2, 0, null)});
+      service.set({minDate: new NgbDate(-2, 0, <any>null)});
       expect(model.minDate).toBeNull();
 
       expect(mock.onNext).toHaveBeenCalledTimes(2);
@@ -108,7 +109,7 @@ describe('ngb-datepicker-service', () => {
       expect(model.maxDate).toBeNull();
 
       // invalid -> ignore
-      service.set({maxDate: new NgbDate(-2, 0, null)});
+      service.set({maxDate: new NgbDate(-2, 0, <any>null)});
       expect(model.maxDate).toBeNull();
 
       expect(mock.onNext).toHaveBeenCalledTimes(2);
@@ -167,8 +168,8 @@ describe('ngb-datepicker-service', () => {
     it(`should mark dates outside 'min/maxDates' as disabled`, () => {
       // MAY 2017
       service.focus(new NgbDate(2017, 5, 1));
-      expect(model.minDate).toBeUndefined();
-      expect(model.maxDate).toBeUndefined();
+      expect(model.minDate).toBeNull();
+      expect(model.maxDate).toBeNull();
       expect(getDayCtx(0).disabled).toBe(false);  // 1 MAY
       expect(getDayCtx(5).disabled).toBe(false);  // 6 MAY
 
@@ -182,8 +183,8 @@ describe('ngb-datepicker-service', () => {
       // MAY 2017
       service.focus(new NgbDate(2017, 5, 5));
       expect(model.months.length).toBe(1);
-      expect(model.minDate).toBeUndefined();
-      expect(model.maxDate).toBeUndefined();
+      expect(model.minDate).toBeNull();
+      expect(model.maxDate).toBeNull();
 
       // MIN -> 5 MAY, 2017
       service.set({minDate: new NgbDate(2017, 5, 5)});
@@ -210,11 +211,11 @@ describe('ngb-datepicker-service', () => {
       expect(model.firstDayOfWeek).toEqual(2);
 
       // null -> ignore
-      service.set({firstDayOfWeek: null});
+      service.set({firstDayOfWeek: <any>null});
       expect(model.firstDayOfWeek).toEqual(2);
 
       // undefined -> ignore
-      service.set({firstDayOfWeek: null});
+      service.set({firstDayOfWeek: undefined});
       expect(model.firstDayOfWeek).toEqual(2);
 
       expect(mock.onNext).toHaveBeenCalledTimes(1);
@@ -232,18 +233,18 @@ describe('ngb-datepicker-service', () => {
     it(`should generate a month with firstDayOfWeek=1 by default`, () => {
       service.focus(new NgbDate(2017, 5, 5));
       expect(model.months.length).toBe(1);
-      expect(model.months[0].weekdays[0]).toBe(1);
+      expect(model.months[0].weekdays[0]).toBe('Mo');
     });
 
     it(`should generate weeks starting with 'firstDayOfWeek'`, () => {
       service.set({firstDayOfWeek: 2});
       service.focus(new NgbDate(2017, 5, 5));
       expect(model.months.length).toBe(1);
-      expect(model.months[0].weekdays[0]).toBe(2);
+      expect(model.months[0].weekdays[0]).toBe('Tu');
 
       service.set({firstDayOfWeek: 4});
       expect(model.months.length).toBe(1);
-      expect(model.months[0].weekdays[0]).toBe(4);
+      expect(model.months[0].weekdays[0]).toBe('Th');
     });
 
     it(`should update months when 'firstDayOfWeek' changes`, () => {
@@ -262,6 +263,29 @@ describe('ngb-datepicker-service', () => {
     });
   });
 
+  describe(`weekday`, () => {
+
+    it(`should update visibility and width correctly`, () => {
+      // default values
+      service.focus(new NgbDate(2017, 5, 1));
+      expect(model.weekdayWidth).toBe(TranslationWidth.Short);
+      expect(model.weekdaysVisible).toBeTrue();
+      expect(model.months[0].weekdays).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
+
+      // Specific width
+      service.set({weekdays: TranslationWidth.Narrow});
+      expect(model.weekdayWidth).toBe(TranslationWidth.Narrow);
+      expect(model.weekdaysVisible).toBeTrue();
+      expect(model.months[0].weekdays).toEqual(['M', 'T', 'W', 'T', 'F', 'S', 'S']);
+
+      // false
+      service.set({weekdays: false});
+      expect(model.weekdayWidth).toBe(TranslationWidth.Short);
+      expect(model.weekdaysVisible).toBeFalse();
+      expect(model.months[0].weekdays).toEqual([]);
+    });
+  });
+
   describe(`displayMonths`, () => {
 
     it(`should emit only positive numeric 'displayMonths' values`, () => {
@@ -275,11 +299,11 @@ describe('ngb-datepicker-service', () => {
       expect(model.displayMonths).toEqual(2);
 
       // null -> ignore
-      service.set({displayMonths: null});
+      service.set({displayMonths: <any>null});
       expect(model.displayMonths).toEqual(2);
 
       // undefined -> ignore
-      service.set({displayMonths: null});
+      service.set({displayMonths: undefined});
       expect(model.displayMonths).toEqual(2);
 
       expect(mock.onNext).toHaveBeenCalledTimes(1);
@@ -998,7 +1022,7 @@ describe('ngb-datepicker-service', () => {
     it(`should ignore invalid 'focus()' values`, () => {
       service.focus(null);
       service.focus(undefined);
-      service.focus(new NgbDate(-2, 0, null));
+      service.focus(new NgbDate(-2, 0, <any>null));
 
       expect(mock.onNext).not.toHaveBeenCalled();
     });
@@ -1370,7 +1394,7 @@ describe('ngb-datepicker-service', () => {
       // off
       service.select(null);
       expect(getDayCtx(0).selected).toBeFalsy();
-      expect(getDayCtx(1).selected).toBeFalsy();
+      expect(getDayCtx(1).selected).toBeTruthy();
     });
 
     it(`should update 'disabled' flag for day template`, () => {

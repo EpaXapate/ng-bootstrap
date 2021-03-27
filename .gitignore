@@ -3,9 +3,11 @@
 /dist/
 /temp/
 /demo/dist/
+/schematics/dist/
 /out-tsc
 /e2e-app/dist/
 /ssr-app/dist/
+/test-app/dist/
 npm-debug.log
 .publish
 .sw*
@@ -13,7 +15,8 @@ npm-debug.log
 *.iml
 .vscode
 coverage
-coverage-e2e
+coverage-e2e/
+coverage-e2e-*/
 demo/src/api-docs.ts
 demo/src/public/**/plnkr.html
 demo/src/public/**/stackblitz.html
@@ -22,3 +25,4 @@ local.docs.json
 yarn-error.log
 .ng_pkg_build
 src/ng-bootstrap.metadata.json
+test-videos/
