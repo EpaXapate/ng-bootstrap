@@ -30,7 +30,7 @@ export class NgbModalStack {
   private _modalRefs: NgbModalRef[] = [];
   private _windowAttributes = [
     'animation', 'ariaLabelledBy', 'ariaDescribedBy', 'backdrop', 'centered', 'keyboard', 'scrollable', 'size',
-    'windowClass'
+    'windowClass', 'modalDialogClass'
   ];
   private _windowCmpts: ComponentRef<NgbModalWindow>[] = [];
   private _activeInstances: EventEmitter<NgbModalRef[]> = new EventEmitter();
@@ -90,7 +90,9 @@ export class NgbModalStack {
 
     if (backdropCmptRef && backdropCmptRef.instance) {
       this._applyBackdropOptions(backdropCmptRef.instance, options);
+      backdropCmptRef.changeDetectorRef.detectChanges();
     }
+    windowCmptRef.changeDetectorRef.detectChanges();
     return ngbModalRef;
   }
 

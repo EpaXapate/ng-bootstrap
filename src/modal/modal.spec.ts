@@ -587,6 +587,21 @@ describe('ngb-modal', () => {
 
     });
 
+    describe('modal dialog custom class options', () => {
+
+      it('should render modals with the correct dialog custom classes', () => {
+        const modalInstance = fixture.componentInstance.open('foo', {modalDialogClass: 'bar'});
+        fixture.detectChanges();
+        expect(fixture.nativeElement).toHaveModal('foo');
+        expect(document.querySelector('.modal-dialog')).toHaveCssClass('bar');
+
+        modalInstance.close();
+        fixture.detectChanges();
+        expect(fixture.nativeElement).not.toHaveModal();
+      });
+
+    });
+
     describe('custom injector option', () => {
 
       it('should render modal with a custom injector', () => {
@@ -961,6 +976,10 @@ describe('ngb-modal', () => {
                component.detectChanges();
 
                const modalRef = component.componentInstance.open();
+
+               // Ensure that everything works fine after a reflow
+               document.body.getBoundingClientRect();
+
                let modalEl: HTMLElement | null = null;
 
                modalRef.shown.subscribe(() => {
